@@ -1,0 +1,199 @@
+@page "/"
+@using Sudoku.Application.Services
+@using Sudoku.Application.Interfaces
+@using Sudoku.Domain
+@rendermode InteractiveServer
+@inject SudokuService Sudoku
+
+<PageTitle>Sudoku Game</PageTitle>
+
+<div class="sudoku-root" @onmouseup="OnMouseUp">
+    <div class="toolbar">
+        <button class="btn diff easy" @onclick="(() => New(Difficulty.Easy))">Easy</button>
+        <button class="btn diff med" @onclick="(() => New(Difficulty.Medium))">Medium</button>
+        <button class="btn diff hard" @onclick="(() => New(Difficulty.Hard))">Hard</button>
+        <span class="spacer"></span>
+        <button class="btn action validate" @onclick="Validate">Validate</button>
+        <button class="btn action hint" @onclick="ApplyHint">Hint</button>
+        <button class="btn action solve" @onclick="Solve">Solve</button>
+        <button class="btn action clear-all" @onclick="ClearAll">Clear All</button>
+    </div>
+
+    <div class="board" @key="boardKey" @onmouseleave="EndDrag">
+        @for (var row = 0; row < 9; row++)
+        {
+            var r = row; // Local copy to avoid closure issues
+            <div class="srow">
+                @for (var col = 0; col < 9; col++)
+                {
+                    var c = col; // Local copy to avoid closure issues
+                    var cellClasses = GetCellClasses(r, c);
+                    var cellValue = Sudoku.Current.Cells[r, c].Value;
+                    
+                    <div class="@cellClasses"
+                         tabindex="0"
+                         role="button"
+                         aria-selected="@IsSelected(r,c)"
+                         @onclick="@(()=>HandleClick(r,c))"
+                         @onpointerdown="@(()=>HandlePointerDown(r,c))"
+                         @onpointerenter="@(()=>HandlePointerEnter(r,c))"
+                         @onfocus="@(()=>HandleFocus(r,c))"
+                         @onkeyup="@(e=>HandleKeyUp(e,r,c))">
+                        @if (cellValue is int val)
+                        {
+                            <span>@val</span>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="numpad">
+        @for (int n = 1; n <= 9; n++)
+        {
+            var num = n; // Local copy
+            <button class="btn num" @onclick="(()=>Place(num))">@num</button>
+        }
+        <button class="btn clear" @onclick="Clear">Clear</button>
+    </div>
+
+    <div class="status">Selected: @(Sudoku.Selected is Position sp ? $"({sp.Row+1},{sp.Col+1})" : "none")</div>
+
+    @if (message is not null)
+    {
+        <div class="message">@message</div>
+    }
+</div>
+
+@code {
+    [Inject] public ISudokuValidator Validator { get; set; } = default!;
+
+    private bool isDragging;
+    private string? message;
+    private int boardKey = 0;
+
+    protected override void OnInitialized()
+    {
+        Sudoku.New(Difficulty.Easy);
+        Sudoku.ClearSelection();
+        boardKey++;
+    }
+
+    void New(Difficulty d)
+    {
+        Sudoku.New(d);
+        Sudoku.ClearSelection();
+        message = $"New {d} puzzle generated.";
+        boardKey++;
+    }
+
+    void HandleClick(int r, int c)
+    {
+        if (r < 0 || r >= 9 || c < 0 || c >= 9) return;
+        Sudoku.Select(r, c);
+    }
+
+    void HandleFocus(int r, int c)
+    {
+        if (r < 0 || r >= 9 || c < 0 || c >= 9) return;
+        Sudoku.Select(r, c);
+    }
+
+    void HandlePointerDown(int r, int c)
+    {
+        if (r < 0 || r >= 9 || c < 0 || c >= 9) return;
+        isDragging = true;
+        Sudoku.Select(r, c);
+    }
+
+    void HandlePointerEnter(int r, int c)
+    {
+        if (!isDragging || r < 0 || r >= 9 || c < 0 || c >= 9) return;
+        Sudoku.Select(r, c);
+    }
+
+    void Place(int n)
+    {
+        Sudoku.Place(n);
+    }
+
+    void Clear()
+    {
+        Sudoku.Clear();
+    }
+
+    void ClearAll()
+    {
+        Sudoku.ClearAll();
+        message = "All user entries cleared.";
+    }
+
+    void Validate()
+    {
+        message = Sudoku.Validate() ? "Board is valid so far." : "There are conflicts.";
+    }
+
+    void ApplyHint()
+    {
+        var h = Sudoku.Hint();
+        if (h is null) 
+        { 
+            message = "No hint available."; 
+            return; 
+        }
+        Sudoku.ApplyHint();
+        Sudoku.Select(h.Value.pos.Row, h.Value.pos.Col);
+        message = $"Hint: placed {h.Value.value} at ({h.Value.pos.Row+1},{h.Value.pos.Col+1}).";
+    }
+
+    void Solve()
+    {
+        message = Sudoku.Solve() ? "Solved!" : "No solution.";
+    }
+
+    void EndDrag()
+    {
+        isDragging = false;
+    }
+
+    void OnMouseUp(MouseEventArgs _)
+    {
+        isDragging = false;
+    }
+
+    void HandleKeyUp(KeyboardEventArgs e, int r, int c)
+    {
+        if (e.Key is null || r < 0 || r >= 9 || c < 0 || c >= 9) return;
+        
+        if (int.TryParse(e.Key, out var n) && n is >= 1 and <= 9)
+        {
+            Sudoku.Select(r, c);
+            Sudoku.Place(n);
+        }
+        else if (e.Key == "Backspace" || e.Key == "Delete")
+        {
+            Sudoku.Select(r, c);
+            Sudoku.Clear();
+        }
+    }
+
+    bool IsSelected(int r, int c)
+    {
+        if (r < 0 || r >= 9 || c < 0 || c >= 9) return false;
+        return Sudoku.Selected?.Row == r && Sudoku.Selected?.Col == c;
+    }
+
+    string GetCellClasses(int r, int c)
+    {
+        if (r < 0 || r >= 9 || c < 0 || c >= 9) return "cell";
+        
+        var cell = Sudoku.Current.Cells[r, c];
+        bool isSelected = IsSelected(r, c);
+        bool sameRow = Sudoku.Selected?.Row == r;
+        bool sameCol = Sudoku.Selected?.Col == c;
+        bool hasConflict = Sudoku.HasConflict(r, c);
+        string borderClasses = (r % 3 == 0 ? " top3" : "") + (c % 3 == 0 ? " left3" : "") + (r == 8 ? " bottom3" : "") + (c == 8 ? " right3" : "");
+        return $"cell{(cell.IsGiven ? " given" : "")}{(isSelected ? " selected" : "")}{(sameRow ? " rowhl" : "")}{(sameCol ? " colhl" : "")}{(hasConflict ? " conflict" : "")}{borderClasses}";
+    }
+}

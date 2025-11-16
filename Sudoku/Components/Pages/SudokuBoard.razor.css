@@ -1,0 +1,40 @@
+.sudoku-root{display:flex;flex-direction:column;gap:12px;align-items:flex-start;padding:20px}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.toolbar .spacer{width:24px}
+.btn{padding:8px 14px;border-radius:8px;border:none;cursor:pointer;font-weight:500;font-size:14px;transition:all .2s ease;box-shadow:0 2px 4px rgba(0,0,0,.1)}
+.btn:hover{transform:translateY(-1px);box-shadow:0 4px 8px rgba(0,0,0,.15)}
+.btn:active{transform:translateY(0);box-shadow:0 1px 2px rgba(0,0,0,.1)}
+.btn.diff.easy{background:linear-gradient(135deg, #a8e6cf 0%, #7bc993 100%);color:#2d5f3f}
+.btn.diff.med{background:linear-gradient(135deg, #ffd89b 0%, #ffb366 100%);color:#8b5a00}
+.btn.diff.hard{background:linear-gradient(135deg, #ff9a9e 0%, #ff6b81 100%);color:#8b1a2b}
+.btn.action{color:#fff;padding:8px 16px}
+.btn.action.validate{background:linear-gradient(135deg, #667eea 0%, #764ba2 100%)}
+.btn.action.validate:hover{background:linear-gradient(135deg, #5568d3 0%, #63408a 100%)}
+.btn.action.hint{background:linear-gradient(135deg, #f093fb 0%, #f5576c 100%)}
+.btn.action.hint:hover{background:linear-gradient(135deg, #de7ce8 0%, #dc4458 100%)}
+.btn.action.solve{background:linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)}
+.btn.action.solve:hover{background:linear-gradient(135deg, #3d92e5 0%, #00d9e5 100%)}
+.btn.action.clear-all{background:linear-gradient(135deg, #fa709a 0%, #fee140 100%)}
+.btn.action.clear-all:hover{background:linear-gradient(135deg, #e15e87 0%, #e5ca28 100%)}
+.board{display:inline-block;background:#fff;user-select:none}
+.srow{display:flex}
+.cell{width:52px;height:52px;border:1px solid #d0d0d0;display:flex;align-items:center;justify-content:center;font-size:22px;outline:none;transition:box-shadow .2s ease, background .2s ease;cursor:pointer}
+.cell.left3{border-left:4px solid #000}
+.cell.top3{border-top:4px solid #000}
+.cell.right3{border-right:4px solid #000}
+.cell.bottom3{border-bottom:4px solid #000}
+.cell.given{background:#fafafa;font-weight:bold}
+.cell.selected{animation:selpulse 1.2s ease-in-out infinite;box-shadow:inset 0 0 0 2px #4b9cff}
+.cell.rowhl:not(.selected):not(.conflict){background:linear-gradient(to right, rgba(75,156,255,.08), rgba(75,156,255,.02))}
+.cell.colhl:not(.selected):not(.conflict){background:linear-gradient(to bottom, rgba(75,156,255,.08), rgba(75,156,255,.02))}
+.cell.conflict{animation:conflictpulse 1.5s ease-in-out infinite;background:#ffe0e0;color:#c92a2a;font-weight:bold}
+.numpad{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.btn.num{width:40px;height:40px;padding:0;background:linear-gradient(135deg, #e0e7ff 0%, #cfd9fe 100%);color:#3730a3;font-weight:600;font-size:16px}
+.btn.num:hover{background:linear-gradient(135deg, #c7d2fe 0%, #a5b4fc 100%)}
+.btn.clear{background:linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);color:#7f1d1d;font-weight:600}
+.btn.clear:hover{background:linear-gradient(135deg, #fca5a5 0%, #f87171 100%)}
+.message{min-height:1.2em;font-size:14px;color:#4b5563;font-weight:500}
+.status{font-size:12px;color:#6b7280;font-style:italic}
+
+@keyframes selpulse{0%{box-shadow:inset 0 0 0 0 #4b9cff}50%{box-shadow:inset 0 0 0 3px #4b9cff}100%{box-shadow:inset 0 0 0 0 #4b9cff}}
+@keyframes conflictpulse{0%{background:#ffe0e0;box-shadow:inset 0 0 0 0 rgba(201,42,42,.3)}50%{background:#ffb3b3;box-shadow:inset 0 0 0 3px rgba(201,42,42,.5)}100%{background:#ffe0e0;box-shadow:inset 0 0 0 0 rgba(201,42,42,.3)}}
