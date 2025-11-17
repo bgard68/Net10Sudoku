@@ -55,21 +55,26 @@
 
 .scrolling-text{
     position:absolute;
-    font-size:32px;
+    font-size:28px;
     font-weight:900;
     text-transform:uppercase;
-    letter-spacing:3px;
-    color:#00ff00;
+    letter-spacing:4px;
+    color:#39ff14;
     text-shadow:
-        0 0 10px #00ff00,
-        0 0 20px #00ff00,
-        0 0 30px #00ff00,
+        0 0 5px #39ff14,
+        0 0 10px #39ff14,
+        0 0 20px #39ff14,
+        0 0 30px #39ff14,
         0 0 40px #00ff00,
         0 0 50px #00ff00,
-        0 0 60px #39ff14,
-        0 0 70px #39ff14;
+        0 0 60px #00ff00,
+        0 0 70px #00ff00,
+        0 0 80px #00ff00;
     white-space:nowrap;
-    animation:scroll-perimeter 12s linear infinite;
+    animation:scroll-perimeter 18s linear infinite;
+    filter:contrast(1.5) brightness(1.3);
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
 }
 
 @keyframes scroll-perimeter{
@@ -99,6 +104,216 @@
     25%{background:#ffe0ff;transform:scale(1.05)}
     50%{background:#e0ffff;transform:scale(1)}
     75%{background:#ffffe0;transform:scale(1.05)}
+}
+
+/* Professional Starbursts Container */
+.starbursts-container{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;overflow:hidden;perspective:1000px}
+
+/* Individual Starburst */
+.starburst{position:absolute;width:0;height:0;transform:translate(-50%,-50%);transform-style:preserve-3d}
+
+/* Professional Particle with Realistic Physics */
+.particle{
+    position:absolute;
+    width:4px;
+    height:16px;
+    top:0;
+    left:0;
+    background:linear-gradient(180deg, currentColor 0%, currentColor 60%, transparent 100%);
+    border-radius:2px 2px 0 0;
+    animation:particle-professional 2.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+    filter:blur(0.3px);
+    transform-origin:center bottom;
+}
+
+/* Realistic long trailing effect */
+.particle::after{
+    content:'';
+    position:absolute;
+    width:2px;
+    height:200%;
+    top:100%;
+    left:50%;
+    transform:translateX(-50%);
+    background:linear-gradient(180deg, currentColor 0%, transparent 100%);
+    opacity:0.4;
+    filter:blur(0.8px);
+}
+
+@keyframes particle-professional{
+    0%{
+        transform:translate(0, 0) scale(1.5) rotateZ(0deg);
+        opacity:0;
+    }
+    3%{
+        opacity:1;
+        transform:translate(0, 0) scale(1.5) rotateZ(0deg);
+        box-shadow:
+            0 0 15px currentColor,
+            0 0 30px currentColor,
+            0 0 45px rgba(255,255,255,0.8),
+            0 0 60px currentColor;
+    }
+    15%{
+        opacity:1;
+        transform:translate(
+            calc(cos(var(--angle)) * calc(var(--distance) * 0.3)),
+            calc(sin(var(--angle)) * calc(var(--distance) * 0.3) - 5px)
+        ) scale(1.3) rotateZ(calc(var(--angle) + 90deg));
+        box-shadow:
+            0 0 12px currentColor,
+            0 0 25px currentColor,
+            0 0 40px rgba(255,255,255,0.6);
+    }
+    40%{
+        opacity:0.95;
+        transform:translate(
+            calc(cos(var(--angle)) * calc(var(--distance) * 0.7)),
+            calc(sin(var(--angle)) * calc(var(--distance) * 0.7) + 15px)
+        ) scale(1) rotateZ(calc(var(--angle) + 90deg));
+    }
+    70%{
+        opacity:0.6;
+        transform:translate(
+            calc(cos(var(--angle)) * var(--distance)),
+            calc(sin(var(--angle)) * var(--distance) + 40px)
+        ) scale(0.7) rotateZ(calc(var(--angle) + 90deg));
+        box-shadow:0 0 8px currentColor,0 0 16px currentColor;
+    }
+    100%{
+        opacity:0;
+        transform:translate(
+            calc(cos(var(--angle)) * calc(var(--distance) * 1.1)),
+            calc(sin(var(--angle)) * calc(var(--distance) * 1.1) + 60px)
+        ) scale(0.3) rotateZ(calc(var(--angle) + 90deg));
+        box-shadow:0 0 3px currentColor;
+    }
+}
+
+/* Professional Shockwave Ring */
+.starburst::before{
+    content:'';
+    position:absolute;
+    top:50%;
+    left:50%;
+    width:70px;
+    height:70px;
+    border:5px solid rgba(255,255,255,0.95);
+    border-radius:50%;
+    transform:translate(-50%,-50%);
+    animation:shockwave-professional 2.5s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+@keyframes shockwave-professional{
+    0%{
+        transform:translate(-50%,-50%) scale(0);
+        opacity:0;
+        border-width:6px;
+        box-shadow:
+            0 0 15px rgba(255,255,255,0.9),
+            inset 0 0 15px rgba(255,255,255,0.6);
+    }
+    3%{
+        opacity:1;
+        border-width:5px;
+    }
+    15%{
+        transform:translate(-50%,-50%) scale(2);
+        opacity:0.95;
+        border-width:4px;
+    }
+    40%{
+        transform:translate(-50%,-50%) scale(5);
+        opacity:0.6;
+        border-width:2px;
+    }
+    100%{
+        transform:translate(-50%,-50%) scale(8);
+        opacity:0;
+        border-width:0.5px;
+        box-shadow:0 0 5px rgba(255,255,255,0.2);
+    }
+}
+
+/* Secondary Atmospheric Glow */
+.starburst::after{
+    content:'';
+    position:absolute;
+    top:50%;
+    left:50%;
+    width:100px;
+    height:100px;
+    border-radius:50%;
+    transform:translate(-50%,-50%);
+    background:radial-gradient(circle, 
+        rgba(255,255,255,0.9) 0%, 
+        rgba(255,255,255,0.5) 20%,
+        rgba(255,255,255,0.2) 40%,
+        transparent 70%);
+    animation:atmospheric-glow 2.5s ease-out infinite;
+    mix-blend-mode:screen;
+}
+
+@keyframes atmospheric-glow{
+    0%{
+        transform:translate(-50%,-50%) scale(0);
+        opacity:0;
+    }
+    5%{
+        opacity:0.8;
+    }
+    20%{
+        transform:translate(-50%,-50%) scale(3);
+        opacity:0.6;
+    }
+    100%{
+        transform:translate(-50%,-50%) scale(6);
+        opacity:0;
+    }
+}
+
+/* Glitter Sparkles with Natural Variation */
+.particle::before{
+    content:'';
+    position:absolute;
+    width:6px;
+    height:6px;
+    background:radial-gradient(circle, rgba(255,255,255,1) 0%, currentColor 40%, transparent 100%);
+    border-radius:50%;
+    top:-3px;
+    left:50%;
+    transform:translateX(-50%);
+    animation:glitter-professional 1.8s ease-in-out infinite;
+    box-shadow:
+        0 0 8px rgba(255,255,255,0.9),
+        0 0 16px currentColor;
+}
+
+@keyframes glitter-professional{
+    0%,100%{
+        transform:translateX(-50%) scale(0) rotate(0deg);
+        opacity:0;
+    }
+    15%{
+        transform:translateX(-50%) scale(1.8) rotate(180deg);
+        opacity:1;
+    }
+    30%{
+        transform:translateX(-50%) scale(1) rotate(360deg);
+        opacity:0.7;
+    }
+    45%{
+        transform:translateX(-50%) scale(1.5) rotate(540deg);
+        opacity:1;
+    }
+    60%{
+        transform:translateX(-50%) scale(0.8) rotate(720deg);
+        opacity:0.6;
+    }
+    75%{
+        transform:translateX(-50%) scale(1.2) rotate(900deg);
+        opacity:0.4;
+    }
 }
 
 @keyframes selpulse{0%{box-shadow:inset 0 0 0 0 #4b9cff}50%{box-shadow:inset 0 0 0 3px #4b9cff}100%{box-shadow:inset 0 0 0 0 #4b9cff}}
@@ -208,13 +423,16 @@
 }
 
 .sudoku-root.dark-mode .scrolling-text {
-    color: #00ff00;
+    color: #39ff14;
     text-shadow:
-        0 0 10px #00ff00,
-        0 0 20px #00ff00,
-        0 0 30px #00ff00,
+        0 0 5px #39ff14,
+        0 0 10px #39ff14,
+        0 0 20px #39ff14,
+        0 0 30px #39ff14,
         0 0 40px #00ff00,
         0 0 50px #00ff00,
-        0 0 60px #39ff14,
-        0 0 70px #39ff14;
+        0 0 60px #00ff00,
+        0 0 70px #00ff00,
+        0 0 80px #00ff00;
+    filter:contrast(1.5) brightness(1.3);
 }
