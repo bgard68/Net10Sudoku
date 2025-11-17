@@ -4,10 +4,12 @@
 @using Sudoku.Domain
 @rendermode InteractiveServer
 @inject SudokuService Sudoku
+@inject ThemeService ThemeService
+@implements IDisposable
 
 <PageTitle>Sudoku Game</PageTitle>
 
-<div class="sudoku-root" @onmouseup="OnMouseUp">
+<div class="sudoku-root @(ThemeService.IsDarkMode ? "dark-mode" : "")" @onmouseup="OnMouseUp">
     <div class="toolbar">
         <button class="btn diff easy" @onclick="(() => New(Difficulty.Easy))">Easy</button>
         <button class="btn diff med" @onclick="(() => New(Difficulty.Medium))">Medium</button>
@@ -19,32 +21,41 @@
         <button class="btn action clear-all" @onclick="ClearAll">Clear All</button>
     </div>
 
-    <div class="board" @key="boardKey" @onmouseleave="EndDrag">
-        @for (var row = 0; row < 9; row++)
+    <div class="board-wrapper">
+        <div class="board @(isSolved ? "celebration" : "")" @key="boardKey" @onmouseleave="EndDrag">
+            @for (var row = 0; row < 9; row++)
+            {
+                var r = row; // Local copy to avoid closure issues
+                <div class="srow">
+                    @for (var col = 0; col < 9; col++)
+                    {
+                        var c = col; // Local copy to avoid closure issues
+                        var cellClasses = GetCellClasses(r, c);
+                        var cellValue = Sudoku.Current.Cells[r, c].Value;
+                        
+                        <div class="@cellClasses"
+                             tabindex="0"
+                             role="button"
+                             aria-selected="@IsSelected(r,c)"
+                             @onclick="@(()=>HandleClick(r,c))"
+                             @onpointerdown="@(()=>HandlePointerDown(r,c))"
+                             @onpointerenter="@(()=>HandlePointerEnter(r,c))"
+                             @onfocus="@(()=>HandleFocus(r,c))"
+                             @onkeyup="@(e=>HandleKeyUp(e,r,c))">
+                            @if (cellValue is int val)
+                            {
+                                <span>@val</span>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        @if (isSolved)
         {
-            var r = row; // Local copy to avoid closure issues
-            <div class="srow">
-                @for (var col = 0; col < 9; col++)
-                {
-                    var c = col; // Local copy to avoid closure issues
-                    var cellClasses = GetCellClasses(r, c);
-                    var cellValue = Sudoku.Current.Cells[r, c].Value;
-                    
-                    <div class="@cellClasses"
-                         tabindex="0"
-                         role="button"
-                         aria-selected="@IsSelected(r,c)"
-                         @onclick="@(()=>HandleClick(r,c))"
-                         @onpointerdown="@(()=>HandlePointerDown(r,c))"
-                         @onpointerenter="@(()=>HandlePointerEnter(r,c))"
-                         @onfocus="@(()=>HandleFocus(r,c))"
-                         @onkeyup="@(e=>HandleKeyUp(e,r,c))">
-                        @if (cellValue is int val)
-                        {
-                            <span>@val</span>
-                        }
-                    </div>
-                }
+            <div class="scrolling-text-container">
+                <div class="scrolling-text">CONGRATULATIONS! CONGRATULATIONS! CONGRATULATIONS! CONGRATULATIONS! </div>
             </div>
         }
     </div>
@@ -60,9 +71,43 @@
 
     <div class="status">Selected: @(Sudoku.Selected is Position sp ? $"({sp.Row+1},{sp.Col+1})" : "none")</div>
 
-    @if (message is not null)
+    @if (message is not null && !isSolved)
     {
         <div class="message">@message</div>
+    }
+
+    @if (isSolved)
+    {
+        <div class="starbursts-container">
+            @* Generate 25 firework starbursts at random positions *@
+            @for (int i = 0; i < 25; i++)
+            {
+                var x = Random.Shared.Next(10, 90);
+                var y = Random.Shared.Next(15, 85);
+                var color = GetRandomColor();
+                var delay = Random.Shared.Next(0, 2500);
+                
+                <div class="starburst" 
+                     style="left: @(x)%; 
+                            top: @(y)%; 
+                            animation-delay: @(delay)ms;">
+                    
+                    @* Create 20 particles radiating outward *@
+                    @for (int p = 0; p < 20; p++)
+                    {
+                        var angle = p * 18.0; // 360/20 = 18 degrees
+                        var distance = Random.Shared.Next(50, 90);
+                        var particleDelay = delay + Random.Shared.Next(0, 200);
+                        
+                        <div class="particle" 
+                             style="--angle: @(angle)deg; 
+                                    --distance: @(distance)px;
+                                    background: @color;
+                                    animation-delay: @(particleDelay)ms;"></div>
+                    }
+                </div>
+            }
+        </div>
     }
 </div>
 
@@ -72,12 +117,24 @@
     private bool isDragging;
     private string? message;
     private int boardKey = 0;
+    private bool isSolved = false;
 
     protected override void OnInitialized()
     {
         Sudoku.New(Difficulty.Easy);
         Sudoku.ClearSelection();
         boardKey++;
+        ThemeService.OnThemeChanged += OnThemeChanged;
+    }
+
+    private void OnThemeChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        ThemeService.OnThemeChanged -= OnThemeChanged;
     }
 
     void New(Difficulty d)
@@ -85,6 +142,7 @@
         Sudoku.New(d);
         Sudoku.ClearSelection();
         message = $"New {d} puzzle generated.";
+        isSolved = false;
         boardKey++;
     }
 
@@ -116,40 +174,87 @@
     void Place(int n)
     {
         Sudoku.Place(n);
+        CheckIfSolved();
     }
 
     void Clear()
     {
         Sudoku.Clear();
+        isSolved = false;
     }
 
     void ClearAll()
     {
         Sudoku.ClearAll();
         message = "All user entries cleared.";
+        isSolved = false;
     }
 
     void Validate()
     {
-        message = Sudoku.Validate() ? "Board is valid so far." : "There are conflicts.";
+        bool isValid = Sudoku.Validate();
+        if (isValid && Sudoku.IsComplete())
+        {
+            isSolved = true;
+            message = null;
+        }
+        else
+        {
+            message = isValid ? "Board is valid so far." : "There are conflicts.";
+        }
+    }
+
+    void CheckIfSolved()
+    {
+        if (Sudoku.IsComplete())
+        {
+            isSolved = true;
+            message = null;
+        }
     }
 
     void ApplyHint()
     {
-        var h = Sudoku.Hint();
-        if (h is null) 
-        { 
-            message = "No hint available."; 
-            return; 
+        if (Sudoku.Selected is null)
+        {
+            message = "Please select a cell first to get a hint.";
+            return;
         }
-        Sudoku.ApplyHint();
-        Sudoku.Select(h.Value.pos.Row, h.Value.pos.Col);
-        message = $"Hint: placed {h.Value.value} at ({h.Value.pos.Row+1},{h.Value.pos.Col+1}).";
+
+        var hint = Sudoku.GetHintForSelectedCell();
+        
+        if (hint is null)
+        {
+            var cell = Sudoku.Current.Cells[Sudoku.Selected.Value.Row, Sudoku.Selected.Value.Col];
+            if (cell.IsGiven)
+            {
+                message = "Cannot provide hint for given cells.";
+            }
+            else
+            {
+                message = "Unable to determine hint for this cell.";
+            }
+            return;
+        }
+
+        Sudoku.ApplyHintForSelectedCell();
+        message = $"Hint: placed {hint.Value.value} in the selected cell";
+        
+        CheckIfSolved();
     }
 
     void Solve()
     {
-        message = Sudoku.Solve() ? "Solved!" : "No solution.";
+        bool solved = Sudoku.Solve();
+        if (solved)
+        {
+            isSolved = true;
+            message = null;
+        }
+        else
+        {
+            message = "No solution.";
+        }
     }
 
     void EndDrag()
@@ -170,6 +275,7 @@
         {
             Sudoku.Select(r, c);
             Sudoku.Place(n);
+            CheckIfSolved();
         }
         else if (e.Key == "Backspace" || e.Key == "Delete")
         {
@@ -195,5 +301,11 @@
         bool hasConflict = Sudoku.HasConflict(r, c);
         string borderClasses = (r % 3 == 0 ? " top3" : "") + (c % 3 == 0 ? " left3" : "") + (r == 8 ? " bottom3" : "") + (c == 8 ? " right3" : "");
         return $"cell{(cell.IsGiven ? " given" : "")}{(isSelected ? " selected" : "")}{(sameRow ? " rowhl" : "")}{(sameCol ? " colhl" : "")}{(hasConflict ? " conflict" : "")}{borderClasses}";
+    }
+
+    string GetRandomColor()
+    {
+        var colors = new[] { "#ff0080", "#00ffff", "#ffff00", "#ff00ff", "#00ff00", "#ff8800", "#0088ff", "#ff0000", "#8800ff", "#ff69b4", "#00fa9a", "#ffd700", "#ff1493", "#7fff00" };
+        return colors[Random.Shared.Next(colors.Length)];
     }
 }

@@ -15,6 +15,7 @@ builder.Services.AddSingleton<ISudokuSolver, SudokuSolver>();
 builder.Services.AddSingleton<ISudokuHintProvider, SudokuHintProvider>();
 builder.Services.AddSingleton<ISudokuGenerator, SudokuGenerator>();
 builder.Services.AddScoped<SudokuService>();
+builder.Services.AddSingleton<ThemeService>();
 
 var app = builder.Build();
 
