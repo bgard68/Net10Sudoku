@@ -1,6 +1,20 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@using Sudoku.Application.Services
+@inject ThemeService ThemeService
+@implements IDisposable
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">Sudoku</a>
+        <button class="theme-toggle" @onclick="ToggleTheme" title="Toggle dark/light mode">
+            @if (ThemeService.IsDarkMode)
+            {
+                <span class="bi bi-sun-fill"></span>
+            }
+            else
+            {
+                <span class="bi bi-moon-fill"></span>
+            }
+        </button>
     </div>
 </div>
 
@@ -21,4 +35,26 @@
         </div>
     </nav>
 </div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        ThemeService.OnThemeChanged += OnThemeChanged;
+    }
+
+    private void ToggleTheme()
+    {
+        ThemeService.ToggleTheme();
+    }
+
+    private void OnThemeChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        ThemeService.OnThemeChanged -= OnThemeChanged;
+    }
+}
 

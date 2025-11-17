@@ -1,4 +1,4 @@
-.sudoku-root{display:flex;flex-direction:column;gap:12px;align-items:flex-start;padding:20px}
+.sudoku-root{display:flex;flex-direction:column;gap:12px;align-items:flex-start;padding:20px;position:relative}
 .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .toolbar .spacer{width:24px}
 .btn{padding:8px 14px;border-radius:8px;border:none;cursor:pointer;font-weight:500;font-size:14px;transition:all .2s ease;box-shadow:0 2px 4px rgba(0,0,0,.1)}
@@ -16,7 +16,11 @@
 .btn.action.solve:hover{background:linear-gradient(135deg, #3d92e5 0%, #00d9e5 100%)}
 .btn.action.clear-all{background:linear-gradient(135deg, #fa709a 0%, #fee140 100%)}
 .btn.action.clear-all:hover{background:linear-gradient(135deg, #e15e87 0%, #e5ca28 100%)}
-.board{display:inline-block;background:#fff;user-select:none}
+
+.board-wrapper{position:relative;display:inline-block}
+.board{display:inline-block;background:#fff;user-select:none;transition:all .3s ease}
+.board.celebration{animation:board-flash 0.5s ease-in-out 3, board-rainbow 2s ease-in-out infinite 1.5s;box-shadow:0 0 30px rgba(255,215,0,.8),0 0 60px rgba(255,0,255,.6),0 0 90px rgba(0,255,255,.4)}
+
 .srow{display:flex}
 .cell{width:52px;height:52px;border:1px solid #d0d0d0;display:flex;align-items:center;justify-content:center;font-size:22px;outline:none;transition:box-shadow .2s ease, background .2s ease;cursor:pointer}
 .cell.left3{border-left:4px solid #000}
@@ -28,6 +32,8 @@
 .cell.rowhl:not(.selected):not(.conflict){background:linear-gradient(to right, rgba(75,156,255,.08), rgba(75,156,255,.02))}
 .cell.colhl:not(.selected):not(.conflict){background:linear-gradient(to bottom, rgba(75,156,255,.08), rgba(75,156,255,.02))}
 .cell.conflict{animation:conflictpulse 1.5s ease-in-out infinite;background:#ffe0e0;color:#c92a2a;font-weight:bold}
+.celebration .cell{animation:cell-celebration 0.8s ease-in-out infinite}
+
 .numpad{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .btn.num{width:40px;height:40px;padding:0;background:linear-gradient(135deg, #e0e7ff 0%, #cfd9fe 100%);color:#3730a3;font-weight:600;font-size:16px}
 .btn.num:hover{background:linear-gradient(135deg, #c7d2fe 0%, #a5b4fc 100%)}
@@ -36,5 +42,179 @@
 .message{min-height:1.2em;font-size:14px;color:#4b5563;font-weight:500}
 .status{font-size:12px;color:#6b7280;font-style:italic}
 
+/* Scrolling Congratulations Text */
+.scrolling-text-container{
+    position:absolute;
+    top:-10px;
+    left:-10px;
+    right:-10px;
+    bottom:-10px;
+    pointer-events:none;
+    overflow:hidden;
+}
+
+.scrolling-text{
+    position:absolute;
+    font-size:32px;
+    font-weight:900;
+    text-transform:uppercase;
+    letter-spacing:3px;
+    color:#00ff00;
+    text-shadow:
+        0 0 10px #00ff00,
+        0 0 20px #00ff00,
+        0 0 30px #00ff00,
+        0 0 40px #00ff00,
+        0 0 50px #00ff00,
+        0 0 60px #39ff14,
+        0 0 70px #39ff14;
+    white-space:nowrap;
+    animation:scroll-perimeter 12s linear infinite;
+}
+
+@keyframes scroll-perimeter{
+    0%{top:-40px;left:0%;transform:translateX(0)}
+    25%{top:0%;left:calc(100% + 20px);transform:translateX(0) rotate(90deg)}
+    50%{top:calc(100% + 20px);left:100%;transform:translateX(-100%) rotate(180deg)}
+    75%{top:100%;left:-40px;transform:translateX(0) rotate(270deg)}
+    100%{top:-40px;left:0%;transform:translateX(0) rotate(360deg)}
+}
+
+/* Celebration Animations */
+@keyframes board-flash{
+    0%,100%{transform:scale(1);filter:brightness(1)}
+    50%{transform:scale(1.02);filter:brightness(1.3) hue-rotate(0deg)}
+}
+
+@keyframes board-rainbow{
+    0%{filter:hue-rotate(0deg) brightness(1.1)}
+    25%{filter:hue-rotate(90deg) brightness(1.2)}
+    50%{filter:hue-rotate(180deg) brightness(1.1)}
+    75%{filter:hue-rotate(270deg) brightness(1.2)}
+    100%{filter:hue-rotate(360deg) brightness(1.1)}
+}
+
+@keyframes cell-celebration{
+    0%,100%{background:#fff;transform:scale(1)}
+    25%{background:#ffe0ff;transform:scale(1.05)}
+    50%{background:#e0ffff;transform:scale(1)}
+    75%{background:#ffffe0;transform:scale(1.05)}
+}
+
 @keyframes selpulse{0%{box-shadow:inset 0 0 0 0 #4b9cff}50%{box-shadow:inset 0 0 0 3px #4b9cff}100%{box-shadow:inset 0 0 0 0 #4b9cff}}
 @keyframes conflictpulse{0%{background:#ffe0e0;box-shadow:inset 0 0 0 0 rgba(201,42,42,.3)}50%{background:#ffb3b3;box-shadow:inset 0 0 0 3px rgba(201,42,42,.5)}100%{background:#ffe0e0;box-shadow:inset 0 0 0 0 rgba(201,42,42,.3)}}
+
+/* Dark Mode Styles */
+.sudoku-root.dark-mode .board {
+    background: #000000;
+    border: 2px solid #ffffff;
+}
+
+.sudoku-root.dark-mode .cell {
+    border: 1px solid #ffffff;
+    background: #1a1a1a;
+    color: #ffffff;
+}
+
+.sudoku-root.dark-mode .cell.left3 {
+    border-left: 4px solid #ffffff;
+}
+
+.sudoku-root.dark-mode .cell.top3 {
+    border-top: 4px solid #ffffff;
+}
+
+.sudoku-root.dark-mode .cell.right3 {
+    border-right: 4px solid #ffffff;
+}
+
+.sudoku-root.dark-mode .cell.bottom3 {
+    border-bottom: 4px solid #ffffff;
+}
+
+.sudoku-root.dark-mode .cell.given {
+    background: #2a2a2a;
+    color: #ffffff;
+    font-weight: bold;
+}
+
+/* Ensure all numbers in dark mode are white */
+.sudoku-root.dark-mode .cell span {
+    color: #ffffff;
+}
+
+.sudoku-root.dark-mode .cell.selected {
+    animation: selpulse-dark 1.2s ease-in-out infinite;
+    background: #1a1a1a;
+}
+
+@keyframes selpulse-dark {
+    0% { box-shadow: inset 0 0 0 0 #4b9cff; }
+    50% { box-shadow: inset 0 0 0 3px #4b9cff; }
+    100% { box-shadow: inset 0 0 0 0 #4b9cff; }
+}
+
+.sudoku-root.dark-mode .cell.rowhl:not(.selected):not(.conflict) {
+    background: linear-gradient(to right, rgba(75, 156, 255, 0.15), rgba(75, 156, 255, 0.05));
+    color: #ffffff;
+}
+
+.sudoku-root.dark-mode .cell.colhl:not(.selected):not(.conflict) {
+    background: linear-gradient(to bottom, rgba(75, 156, 255, 0.15), rgba(75, 156, 255, 0.05));
+    color: #ffffff;
+}
+
+.sudoku-root.dark-mode .cell.conflict {
+    animation: conflictpulse-dark 1.5s ease-in-out infinite;
+    background: #4a0000;
+    color: #ff6b6b;
+    font-weight: bold;
+}
+
+@keyframes conflictpulse-dark {
+    0% { background: #4a0000; box-shadow: inset 0 0 0 0 rgba(255, 107, 107, 0.3); }
+    50% { background: #660000; box-shadow: inset 0 0 0 3px rgba(255, 107, 107, 0.5); }
+    100% { background: #4a0000; box-shadow: inset 0 0 0 0 rgba(255, 107, 107, 0.3); }
+}
+
+.sudoku-root.dark-mode .message {
+    color: #d1d5db;
+}
+
+.sudoku-root.dark-mode .status {
+    color: #9ca3af;
+}
+
+/* Dark mode celebration */
+.sudoku-root.dark-mode .celebration .cell {
+    animation: cell-celebration-dark 0.8s ease-in-out infinite;
+}
+
+@keyframes cell-celebration-dark {
+    0%,100%{background:#000000;transform:scale(1)}
+    25%{background:#1a001a;transform:scale(1.05)}
+    50%{background:#001a1a;transform:scale(1)}
+    75%{background:#1a1a00;transform:scale(1.05)}
+}
+
+.sudoku-root.dark-mode .board.celebration {
+    animation: board-flash-dark 0.5s ease-in-out 3, board-rainbow 2s ease-in-out infinite 1.5s;
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.8), 0 0 60px rgba(255, 0, 255, 0.6), 0 0 90px rgba(0, 255, 255, 0.4);
+}
+
+@keyframes board-flash-dark {
+    0%, 100% { transform: scale(1); filter: brightness(1); }
+    50% { transform: scale(1.02); filter: brightness(1.5) hue-rotate(0deg); }
+}
+
+.sudoku-root.dark-mode .scrolling-text {
+    color: #00ff00;
+    text-shadow:
+        0 0 10px #00ff00,
+        0 0 20px #00ff00,
+        0 0 30px #00ff00,
+        0 0 40px #00ff00,
+        0 0 50px #00ff00,
+        0 0 60px #39ff14,
+        0 0 70px #39ff14;
+}

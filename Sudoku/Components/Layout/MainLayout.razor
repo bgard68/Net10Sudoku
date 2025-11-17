@@ -1,6 +1,9 @@
-﻿@inherits LayoutComponentBase
+﻿@using Sudoku.Application.Services
+@inherits LayoutComponentBase
+@inject ThemeService ThemeService
+@implements IDisposable
 
-<div class="page">
+<div class="page @(ThemeService.IsDarkMode ? "dark-mode" : "")">
     <div class="sidebar">
         <NavMenu />
     </div>
@@ -18,3 +21,20 @@
     <a href="." class="reload">Reload</a>
     <span class="dismiss">🗙</span>
 </div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        ThemeService.OnThemeChanged += OnThemeChanged;
+    }
+
+    private void OnThemeChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        ThemeService.OnThemeChanged -= OnThemeChanged;
+    }
+}

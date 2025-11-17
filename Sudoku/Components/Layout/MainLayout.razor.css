@@ -2,6 +2,19 @@
     position: relative;
     display: flex;
     flex-direction: column;
+    background: #ffffff;
+    color: #000000;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Dark Mode */
+.page.dark-mode {
+    background: #000000;
+    color: #ffffff;
+}
+
+.page.dark-mode main {
+    background: #000000;
 }
 
 main {
@@ -10,6 +23,10 @@ main {
 
 .sidebar {
     background-image: linear-gradient(180deg, rgb(5, 39, 103) 0%, #3a0647 70%);
+}
+
+.page.dark-mode .sidebar {
+    background-image: linear-gradient(180deg, #000000 0%, #0a0a0a 70%);
 }
 
 .top-row {

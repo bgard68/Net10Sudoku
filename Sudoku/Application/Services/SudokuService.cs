@@ -77,11 +77,44 @@ public sealed class SudokuService
 
     public (Position pos, int value)? Hint() => _hints.GetNextHint(Current);
 
+    public (Position pos, int value)? GetHintForSelectedCell()
+    {
+        if (Selected is null) return null;
+        
+        var (r, c) = Selected.Value;
+        var cell = Current.Cells[r, c];
+        
+        // Can't provide hint for given cells
+        if (cell.IsGiven) return null;
+        
+        // If cell already has a value, we need to solve to find the correct one
+        // Create a copy of the board and solve it to get the correct answer
+        var copy = Clone(Current);
+        if (_solver.TrySolve(copy))
+        {
+            var correctValue = copy.Get(r, c);
+            if (correctValue.HasValue)
+            {
+                return (new Position(r, c), correctValue.Value);
+            }
+        }
+        
+        return null;
+    }
+
     public void ApplyHint()
     {
         var h = _hints.GetNextHint(Current);
         if (h is null) return;
         var (pos, value) = h.Value;
+        Current.Set(pos.Row, pos.Col, value);
+    }
+
+    public void ApplyHintForSelectedCell()
+    {
+        var hint = GetHintForSelectedCell();
+        if (hint is null) return;
+        var (pos, value) = hint.Value;
         Current.Set(pos.Row, pos.Col, value);
     }
 
