@@ -21,50 +21,63 @@
         <button class="btn action clear-all" @onclick="ClearAll">Clear All</button>
     </div>
 
-    <div class="board-wrapper">
-        <div class="board @(isSolved ? "celebration" : "")" @key="boardKey" @onmouseleave="EndDrag">
-            @for (var row = 0; row < 9; row++)
-            {
-                var r = row; // Local copy to avoid closure issues
-                <div class="srow">
-                    @for (var col = 0; col < 9; col++)
-                    {
-                        var c = col; // Local copy to avoid closure issues
-                        var cellClasses = GetCellClasses(r, c);
-                        var cellValue = Sudoku.Current.Cells[r, c].Value;
-                        
-                        <div class="@cellClasses"
-                             tabindex="0"
-                             role="button"
-                             aria-selected="@IsSelected(r,c)"
-                             @onclick="@(()=>HandleClick(r,c))"
-                             @onpointerdown="@(()=>HandlePointerDown(r,c))"
-                             @onpointerenter="@(()=>HandlePointerEnter(r,c))"
-                             @onfocus="@(()=>HandleFocus(r,c))"
-                             @onkeyup="@(e=>HandleKeyUp(e,r,c))">
-                            @if (cellValue is int val)
-                            {
-                                <span>@val</span>
-                            }
-                        </div>
-                    }
-                </div>
-            }
-        </div>
-
-        @if (isSolved)
+    <div class="board @(isSolved ? "celebration" : "")" @key="boardKey" @onmouseleave="EndDrag">
+        @for (var row = 0; row < 9; row++)
         {
-            <div class="scrolling-text-container">
-                <div class="scrolling-text">CONGRATULATIONS! CONGRATULATIONS! CONGRATULATIONS! CONGRATULATIONS! </div>
+            var r = row;
+            <div class="srow">
+                @for (var col = 0; col < 9; col++)
+                {
+                    var c = col;
+                    var cellClasses = GetCellClasses(r, c);
+                    var cellValue = Sudoku.Current.Cells[r, c].Value;
+                    <div class="@cellClasses"
+                         tabindex="0"
+                         role="button"
+                         aria-selected="@IsSelected(r,c)"
+                         @onclick="@(()=>HandleClick(r,c))"
+                         @onpointerdown="@(()=>HandlePointerDown(r,c))"
+                         @onpointerenter="@(()=>HandlePointerEnter(r,c))"
+                         @onfocus="@(()=>HandleFocus(r,c))"
+                         @onkeyup="@(e=>HandleKeyUp(e,r,c))">
+                    @if (cellValue is int val)
+                    {
+                        <span>@val</span>
+                    }
+                    </div>
+                }
             </div>
         }
+        @if (Sudoku.Selected is Position sel)
+        {
+            var blockRow = (sel.Row / 3) * 3;
+            var blockCol = (sel.Col / 3) * 3;
+            var topPx = blockRow * 52 + blockRow; // add 1px per preceding row border
+            var leftPx = blockCol * 52 + blockCol;
+            <div class="block-overlay" style="top:@topPx}px;left:@leftPx}px;"></div>
+        }
     </div>
+
+    @if (isSolved)
+    {
+        <div class="scrolling-text-container">
+            <div class="scrolling-text">CONGRATULATIONS! CONGRATULATIONS! CONGRATULATIONS! CONGRATULATIONS! </div>
+        </div>
+    }
 
     <div class="numpad">
         @for (int n = 1; n <= 9; n++)
         {
             var num = n; // Local copy
-            <button class="btn num" @onclick="(()=>Place(num))">@num</button>
+            var done = IsNumberFullyPlacedAndValid(num);
+            if (done)
+            {
+                <button class="btn num complete" disabled title="Completed">&#10003;</button>
+            }
+            else
+            {
+                <button class="btn num" @onclick="(()=>Place(num))" title="Place @num">@num</button>
+            }
         }
         <button class="btn clear" @onclick="Clear">Clear</button>
     </div>
@@ -293,19 +306,84 @@
     string GetCellClasses(int r, int c)
     {
         if (r < 0 || r >= 9 || c < 0 || c >= 9) return "cell";
-        
         var cell = Sudoku.Current.Cells[r, c];
         bool isSelected = IsSelected(r, c);
         bool sameRow = Sudoku.Selected?.Row == r;
         bool sameCol = Sudoku.Selected?.Col == c;
         bool hasConflict = Sudoku.HasConflict(r, c);
+        bool sameBlock = false;
+        bool sameValue = false;
+        if (Sudoku.Selected is Position sp)
+        {
+            sameBlock = (r / 3 == sp.Row / 3) && (c / 3 == sp.Col / 3);
+            var selectedVal = Sudoku.Current.Cells[sp.Row, sp.Col].Value;
+            if (selectedVal is int sv && cell.Value is int cv && sv == cv)
+            {
+                sameValue = true;
+            }
+        }
         string borderClasses = (r % 3 == 0 ? " top3" : "") + (c % 3 == 0 ? " left3" : "") + (r == 8 ? " bottom3" : "") + (c == 8 ? " right3" : "");
-        return $"cell{(cell.IsGiven ? " given" : "")}{(isSelected ? " selected" : "")}{(sameRow ? " rowhl" : "")}{(sameCol ? " colhl" : "")}{(hasConflict ? " conflict" : "")}{borderClasses}";
+        return $"cell{(cell.IsGiven ? " given" : "")}{(isSelected ? " selected" : "")}{(sameRow ? " rowhl" : "")}{(sameCol ? " colhl" : "")}{(sameBlock ? " blockhl" : "")}{(sameValue ? " valhl" : "")}{(hasConflict ? " conflict" : "")}{borderClasses}";
     }
 
     string GetRandomColor()
     {
         var colors = new[] { "#ff0080", "#00ffff", "#ffff00", "#ff00ff", "#00ff00", "#ff8800", "#0088ff", "#ff0000", "#8800ff", "#ff69b4", "#00fa9a", "#ffd700", "#ff1493", "#7fff00" };
         return colors[Random.Shared.Next(colors.Length)];
+    }
+
+    bool IsNumberFullyPlacedAndValid(int n)
+    {
+        // must appear exactly once per row, column, and 3x3 block
+        // board is 9x9; treat empty cells (null) as not placed
+        // Return false immediately on any rule violation
+        for (int r = 0; r < 9; r++)
+        {
+            int countRow = 0;
+            for (int c = 0; c < 9; c++)
+            {
+                var v = Sudoku.Current.Cells[r, c].Value;
+                if (v is int vInt && vInt == n) countRow++;
+            }
+            if (countRow != 1) return false;
+        }
+        for (int c = 0; c < 9; c++)
+        {
+            int countCol = 0;
+            for (int r = 0; r < 9; r++)
+            {
+                var v = Sudoku.Current.Cells[r, c].Value;
+                if (v is int vInt && vInt == n) countCol++;
+            }
+            if (countCol != 1) return false;
+        }
+        for (int br = 0; br < 3; br++)
+        {
+            for (int bc = 0; bc < 3; bc++)
+            {
+                int countBlock = 0;
+                for (int r = br * 3; r < br * 3 + 3; r++)
+                {
+                    for (int c = bc * 3; c < bc * 3 + 3; c++)
+                    {
+                        var v = Sudoku.Current.Cells[r, c].Value;
+                        if (v is int vInt && vInt == n) countBlock++;
+                    }
+                }
+                if (countBlock != 1) return false;
+            }
+        }
+        // Optional: ensure the overall board state is valid for this number (no conflicts)
+        // We rely on Sudoku.HasConflict, but that checks per-cell; here we ensure none of the placed n values conflict
+        for (int r = 0; r < 9; r++)
+        for (int c = 0; c < 9; c++)
+        {
+            var v = Sudoku.Current.Cells[r, c].Value;
+            if (v is int vInt && vInt == n)
+            {
+                if (Sudoku.HasConflict(r, c)) return false;
+            }
+        }
+        return true;
     }
 }
