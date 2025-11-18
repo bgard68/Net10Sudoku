@@ -17,6 +17,10 @@ public sealed class Cell
 
     public void Set(int? value, bool given = false)
     {
+        // Prevent modifying cells that are marked as given (puzzle clues).
+        if (IsGiven && !given)
+            throw new InvalidOperationException("Cannot modify a given cell.");
+
         Value = value;
         if (given) IsGiven = true;
     }

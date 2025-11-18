@@ -1,4 +1,4 @@
-namespace Sudoku.Application.Services;
+namespace Sudoku.Services;
 
 public class ThemeService
 {

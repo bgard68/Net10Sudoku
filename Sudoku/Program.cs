@@ -2,6 +2,9 @@ using Sudoku.Components;
 using Sudoku.Application.Interfaces;
 using Sudoku.Application.Services;
 using Sudoku.Infrastructure;
+using Sudoku.Application;
+using Sudoku.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,11 +13,8 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 // Sudoku DI registrations (Clean Architecture style)
-builder.Services.AddSingleton<ISudokuValidator, SudokuValidator>();
-builder.Services.AddSingleton<ISudokuSolver, SudokuSolver>();
-builder.Services.AddSingleton<ISudokuHintProvider, SudokuHintProvider>();
-builder.Services.AddSingleton<ISudokuGenerator, SudokuGenerator>();
-builder.Services.AddScoped<SudokuService>();
+builder.Services.AddApplication();
+builder.Services.AddInfrastructure();
 builder.Services.AddSingleton<ThemeService>();
 
 var app = builder.Build();

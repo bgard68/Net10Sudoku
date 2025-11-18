@@ -1,4 +1,5 @@
 using Sudoku.Application.Interfaces;
+using Sudoku.Application.Models;
 using Sudoku.Domain;
 
 namespace Sudoku.Infrastructure;

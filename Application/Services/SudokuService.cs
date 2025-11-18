@@ -1,4 +1,5 @@
 using Sudoku.Application.Interfaces;
+using Sudoku.Application.Models;
 using Sudoku.Domain;
 
 namespace Sudoku.Application.Services;
@@ -9,16 +10,22 @@ public sealed class SudokuService
     private readonly ISudokuSolver _solver;
     private readonly ISudokuValidator _validator;
     private readonly ISudokuHintProvider _hints;
+    private readonly IConflictDetector _conflicts;
+    private readonly IGameState _state;
+    private readonly IHintOrchestrator _hintOrchestrator;
 
-    public Board Current { get; private set; } = new();
-    public Position? Selected { get; private set; }
+    public Board Current { get => _state.Current; private set => _state.Current = value; }
+    public Position? Selected { get => _state.Selected; private set => _state.Selected = value; }
 
-    public SudokuService(ISudokuGenerator generator, ISudokuSolver solver, ISudokuValidator validator, ISudokuHintProvider hints)
+    public SudokuService(ISudokuGenerator generator, ISudokuSolver solver, ISudokuValidator validator, ISudokuHintProvider hints, IConflictDetector conflicts, IGameState state, IHintOrchestrator hintOrchestrator)
     {
         _generator = generator;
         _solver = solver;
         _validator = validator;
         _hints = hints;
+        _conflicts = conflicts;
+        _state = state;
+        _hintOrchestrator = hintOrchestrator;
     }
 
     public void New(Difficulty difficulty)
@@ -107,6 +114,9 @@ public sealed class SudokuService
         var h = _hints.GetNextHint(Current);
         if (h is null) return;
         var (pos, value) = h.Value;
+        // Do not overwrite given cells
+        var targetCell = Current.Cells[pos.Row, pos.Col];
+        if (targetCell.IsGiven) return;
         Current.Set(pos.Row, pos.Col, value);
     }
 
@@ -115,56 +125,17 @@ public sealed class SudokuService
         var hint = GetHintForSelectedCell();
         if (hint is null) return;
         var (pos, value) = hint.Value;
+        // Do not overwrite given cells
+        var targetCell = Current.Cells[pos.Row, pos.Col];
+        if (targetCell.IsGiven) return;
         Current.Set(pos.Row, pos.Col, value);
     }
 
-    public List<Position> GetConflictingCells(int row, int col)
-    {
-        var conflicts = new List<Position>();
-        var value = Current.Get(row, col);
-        
-        if (value is null) return conflicts;
 
-        // Check row for conflicts
-        for (int c = 0; c < 9; c++)
-        {
-            if (c != col && Current.Get(row, c) == value)
-            {
-                conflicts.Add(new Position(row, c));
-            }
-        }
-
-        // Check column for conflicts
-        for (int r = 0; r < 9; r++)
-        {
-            if (r != row && Current.Get(r, col) == value)
-            {
-                conflicts.Add(new Position(r, col));
-            }
-        }
-
-        // Check 3x3 box for conflicts
-        int boxRow = (row / 3) * 3;
-        int boxCol = (col / 3) * 3;
-        for (int r = boxRow; r < boxRow + 3; r++)
-        {
-            for (int c = boxCol; c < boxCol + 3; c++)
-            {
-                if ((r != row || c != col) && Current.Get(r, c) == value)
-                {
-                    conflicts.Add(new Position(r, c));
-                }
-            }
-        }
-
-        return conflicts;
-    }
 
     public bool HasConflict(int row, int col)
     {
-        var value = Current.Get(row, col);
-        if (value is null) return false;
-        return !_validator.CanPlace(Current, row, col, value.Value);
+        return _conflicts.HasConflict(Current, row, col);
     }
 
 }
