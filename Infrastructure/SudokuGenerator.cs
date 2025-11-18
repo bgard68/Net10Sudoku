@@ -7,7 +7,8 @@ public sealed class SudokuGenerator : ISudokuGenerator
 {
     private readonly ISudokuSolver _solver;
     private readonly ISudokuValidator _validator;
-    private readonly Random _random = new();
+    // Random is not thread-safe; Random.Shared is thread-safe for concurrent Next() calls
+    private static Random Rng => Random.Shared;
 
     public SudokuGenerator(ISudokuSolver solver, ISudokuValidator validator)
     {
@@ -33,7 +34,7 @@ public sealed class SudokuGenerator : ISudokuGenerator
             _ => 50
         };
 
-        var positions = Enumerable.Range(0,81).OrderBy(_ => _random.Next()).ToList();
+        var positions = Enumerable.Range(0,81).OrderBy(_ => Rng.Next()).ToList();
         foreach (var idx in positions)
         {
             if (removals <= 0) break;
@@ -42,7 +43,7 @@ public sealed class SudokuGenerator : ISudokuGenerator
             if (prev is null) continue;
             board.Set(r,c,null);
 
-            if (!HasUniqueSolution(Clone(board)))
+            if (!HasUniqueSolution(board.Clone()))
             {
                 board.Set(r,c,prev);
             }
@@ -68,21 +69,12 @@ public sealed class SudokuGenerator : ISudokuGenerator
     {
         for (int b = 0; b < 3; b++)
         {
-            var nums = Enumerable.Range(1,9).OrderBy(_ => _random.Next()).ToArray();
+            var nums = Enumerable.Range(1,9).OrderBy(_ => Rng.Next()).ToArray();
             int k = 0;
             for (int r = b*3; r < b*3+3; r++)
             for (int c = b*3; c < b*3+3; c++)
                 board.Set(r,c, nums[k++]);
         }
-    }
-
-    private Board Clone(Board source)
-    {
-        var b = new Board();
-        for (int r = 0; r < 9; r++)
-        for (int c = 0; c < 9; c++)
-            b.Set(r,c, source.Get(r,c));
-        return b;
     }
 
     private bool HasUniqueSolution(Board board)

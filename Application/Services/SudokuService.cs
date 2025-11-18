@@ -65,7 +65,7 @@ public sealed class SudokuService
 
     public bool Solve()
     {
-        var copy = Clone(Current);
+        var copy = Current.Clone();
         var ok = _solver.TrySolve(copy);
         if (ok)
         {
@@ -89,7 +89,7 @@ public sealed class SudokuService
         
         // If cell already has a value, we need to solve to find the correct one
         // Create a copy of the board and solve it to get the correct answer
-        var copy = Clone(Current);
+        var copy = Current.Clone();
         if (_solver.TrySolve(copy))
         {
             var correctValue = copy.Get(r, c);
@@ -167,16 +167,4 @@ public sealed class SudokuService
         return !_validator.CanPlace(Current, row, col, value.Value);
     }
 
-    private static Board Clone(Board source)
-    {
-        var b = new Board();
-        for (int r = 0; r < 9; r++)
-        for (int c = 0; c < 9; c++)
-        {
-            var v = source.Get(r,c);
-            var given = source.Cells[r,c].IsGiven;
-            b.Cells[r,c].Set(v, given);
-        }
-        return b;
-    }
 }

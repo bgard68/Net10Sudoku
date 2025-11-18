@@ -14,4 +14,18 @@ public sealed class Board
 
     public int? Get(int r, int c) => Cells[r,c].Value;
     public void Set(int r, int c, int? v, bool given = false) => Cells[r,c].Set(v, given);
+
+    // Create a deep copy of the board (values and given flags)
+    public Board Clone()
+    {
+        var copy = new Board();
+        for (int r = 0; r < 9; r++)
+        for (int c = 0; c < 9; c++)
+        {
+            var v = Cells[r,c].Value;
+            var given = Cells[r,c].IsGiven;
+            copy.Cells[r,c].Set(v, given);
+        }
+        return copy;
+    }
 }
