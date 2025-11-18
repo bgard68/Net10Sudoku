@@ -11,7 +11,7 @@ A modern, feature-rich Sudoku puzzle game built with **Blazor Server** (.NET 10)
 ### ?? Game Features
 - **Multiple Difficulty Levels**: Easy, Medium, and Hard puzzles
 - **Smart Puzzle Generation**: Ensures unique solutions for each puzzle
-- **Real-time Conflict Detection**: Automatically highlights duplicate numbers in rows, columns, and 3�3 boxes
+- **Real-time Conflict Detection**: Automatically highlights duplicate numbers in rows, columns, and 3 3 boxes
 - **Intelligent Hint System**: Suggests the next logical move using advanced solving techniques
 - **Auto-Solve**: Instantly solves the current puzzle
 - **Validation**: Check if your current solution is valid
@@ -30,12 +30,12 @@ A modern, feature-rich Sudoku puzzle game built with **Blazor Server** (.NET 10)
 
 ## ??? Architecture
 
-This project follows **Clean Architecture** principles with **SOLID** design patterns:
+This project follows **Clean Architecture** principles with **SOLID** design patterns:  
 
 ```
 Sudoku/
 ??? Domain/                      # Core business entities
-?   ??? Board.cs                # 9�9 Sudoku board model
+?   ??? Board.cs                # 9 9 Sudoku board model
 ?   ??? Cell.cs                 # Individual cell with value and state
 ?   ??? Position.cs             # Row/column position structure
 ?
@@ -127,14 +127,14 @@ Sudoku/
 ### Game Rules
 - Each **row** must contain digits 1-9 exactly once
 - Each **column** must contain digits 1-9 exactly once
-- Each **3�3 box** must contain digits 1-9 exactly once
+- Each **3 3 box** must contain digits 1-9 exactly once
 - **Conflicting numbers** are highlighted in red automatically
 
 ## ?? Algorithm Details
 
 ### Puzzle Generation
-1. **Initialize**: Create empty 9�9 grid
-2. **Fill Diagonal Boxes**: Randomly fill the three diagonal 3�3 boxes (no conflicts possible)
+1. **Initialize**: Create empty 9 9 grid
+2. **Fill Diagonal Boxes**: Randomly fill the three diagonal 3 3 boxes (no conflicts possible)
 3. **Solve**: Use backtracking to complete the puzzle
 4. **Remove Numbers**: 
    - Easy: Remove ~40 numbers
@@ -163,7 +163,7 @@ Sudoku/
   - Hover: Yellow (`#ffff00`)
 
 ### Game Board
-- **9�9 Grid**: 52�52px cells with clear 3�3 box separators
+- **9 9 Grid**: 52 52px cells with clear 3 3 box separators
 - **Given Numbers**: Bold with light background (immutable)
 - **User Numbers**: Regular weight, editable
 - **Selected Cell**: Blue pulsing animation
