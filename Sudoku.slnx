@@ -1,6 +1,0 @@
-<Solution>
-  <Project Path="Application/Application.csproj" Id="e043870a-21d6-4c1e-8e05-b374c40cf3f1" />
-  <Project Path="Domain/Domain.csproj" Id="64481383-84c4-4cca-bc72-040015129426" />
-  <Project Path="Infrastructure/Infrastructure.csproj" Id="1463c7e4-5a2c-4411-b002-71546167bdf0" />
-  <Project Path="Sudoku/Sudoku.csproj" />
-</Solution>
