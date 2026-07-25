@@ -8,6 +8,12 @@
 
 main {
     flex: 1;
+    /* Flex items default to min-width:auto, so this column refused to shrink
+       below its content's intrinsic width - the About page's 5-item timeline
+       (5 x 180px + gaps) then pushed the whole page into horizontal overflow
+       and clipped the body text. min-width:0 lets it shrink; the timeline
+       still scrolls inside its own overflow-x:auto section. */
+    min-width: 0;
     background: #000000;
 }
 
