@@ -135,30 +135,29 @@
             @if (customizeOpen)
             {
                 <div class="wheel-list">
-                    <div class="wheel-row">
-                        <label class="wheel" title="Pick a background colour">
-                            <input type="color" value="@pageBg" @onchange="@(e => pageBg = SanitizeHex(e.Value?.ToString(), DefaultPageBg))" />
-                        </label>
-                        <div class="wheel-meta"><span class="wheel-name">Background</span><span class="swatch" style="background:@pageBg">@pageBg</span></div>
-                    </div>
-                    <div class="wheel-row">
-                        <label class="wheel" title="Pick a grid background colour">
-                            <input type="color" value="@gridBg" @onchange="@(e => gridBg = SanitizeHex(e.Value?.ToString(), DefaultGridBg))" />
-                        </label>
-                        <div class="wheel-meta"><span class="wheel-name">Grid background</span><span class="swatch" style="background:@gridBg">@gridBg</span></div>
-                    </div>
-                    <div class="wheel-row">
-                        <label class="wheel" title="Pick a grid border colour">
-                            <input type="color" value="@gridBorder" @onchange="@(e => gridBorder = SanitizeHex(e.Value?.ToString(), DefaultGridBorder))" />
-                        </label>
-                        <div class="wheel-meta"><span class="wheel-name">Grid borders</span><span class="swatch" style="background:@gridBorder">@gridBorder</span></div>
-                    </div>
-                    <div class="wheel-row">
-                        <label class="wheel" title="Pick a grid number colour">
-                            <input type="color" value="@gridNum" @onchange="@(e => gridNum = SanitizeHex(e.Value?.ToString(), DefaultGridNum))" />
-                        </label>
-                        <div class="wheel-meta"><span class="wheel-name">Grid numbers</span><span class="swatch" style="background:@gridNum">@gridNum</span></div>
-                    </div>
+                    @for (int w = 0; w < 4; w++)
+                    {
+                        var i = w; // Local copy for the lambdas
+                        <div class="wheel-row">
+                            @* Drag around the ring for live hue picking; the hole
+                               shows the current colour. Exact colours (including
+                               black and white) come from the swatch's picker. *@
+                            <div class="wheel" style="--wheel-fill:@GetWheel(i)"
+                                 role="slider" aria-label="@($"{WheelNames[i]} hue")"
+                                 title="Drag around the ring to pick a hue"
+                                 @onpointerdown="@(e => WheelDown(i, e))"
+                                 @onpointermove="@(e => WheelMove(i, e))"
+                                 @onpointerup="WheelUp"
+                                 @onpointerleave="WheelUp"></div>
+                            <div class="wheel-meta">
+                                <span class="wheel-name">@WheelNames[i]</span>
+                                <label class="swatch" style="background:@GetWheel(i)" title="Pick an exact colour (including black and white)">
+                                    <input type="color" value="@GetWheel(i)" @oninput="@(e => SetWheel(i, e.Value?.ToString()))" />
+                                    @GetWheel(i)
+                                </label>
+                            </div>
+                        </div>
+                    }
                     <button class="linkbtn" @onclick="ResetColors">Reset to defaults</button>
                 </div>
             }
@@ -218,6 +217,75 @@
         gridBg = DefaultGridBg;
         gridBorder = DefaultGridBorder;
         gridNum = DefaultGridNum;
+    }
+
+    private static readonly string[] WheelNames = ["Background", "Grid background", "Grid borders", "Grid numbers"];
+
+    private string GetWheel(int i) => i switch { 0 => pageBg, 1 => gridBg, 2 => gridBorder, _ => gridNum };
+
+    private void SetWheel(int i, string? value)
+    {
+        var hex = SanitizeHex(value, GetWheel(i));
+        switch (i)
+        {
+            case 0: pageBg = hex; break;
+            case 1: gridBg = hex; break;
+            case 2: gridBorder = hex; break;
+            default: gridNum = hex; break;
+        }
+    }
+
+    // Live hue dragging on the wheels. Pointer moves stream over the circuit, so
+    // updates are rate-limited; the guard also keeps plain hovers inert.
+    private int? dragWheel;
+    private DateTime lastWheelApply = DateTime.MinValue;
+
+    private void WheelDown(int i, PointerEventArgs e)
+    {
+        if (HueFromWheel(e) is not double hue) return; // centre hole or outside the ring
+        dragWheel = i;
+        SetWheel(i, HueToHex(hue));
+    }
+
+    private void WheelMove(int i, PointerEventArgs e)
+    {
+        if (dragWheel != i) return;
+        var now = DateTime.UtcNow;
+        if ((now - lastWheelApply).TotalMilliseconds < 40) return;
+        if (HueFromWheel(e) is not double hue) return;
+        lastWheelApply = now;
+        SetWheel(i, HueToHex(hue));
+    }
+
+    private void WheelUp() => dragWheel = null;
+
+    // The wheel is 44px with a 12px-radius hole - these numbers mirror the
+    // .wheel / .wheel::after CSS. Angle is measured from 12 o'clock, clockwise,
+    // matching the conic-gradient the ring is painted with.
+    private static double? HueFromWheel(PointerEventArgs e)
+    {
+        var dx = e.OffsetX - 22;
+        var dy = e.OffsetY - 22;
+        var r = Math.Sqrt(dx * dx + dy * dy);
+        if (r < 12 || r > 22) return null;
+        var deg = Math.Atan2(dx, -dy) * 180.0 / Math.PI;
+        return deg < 0 ? deg + 360 : deg;
+    }
+
+    // HSL (hue, 100%, 50%) to hex - the same vivid colours the ring shows.
+    private static string HueToHex(double hue)
+    {
+        double x = 1 - Math.Abs(hue / 60 % 2 - 1);
+        var (r, g, b) = ((int)(hue / 60) % 6) switch
+        {
+            0 => (1.0, x, 0.0),
+            1 => (x, 1.0, 0.0),
+            2 => (0.0, 1.0, x),
+            3 => (0.0, x, 1.0),
+            4 => (x, 0.0, 1.0),
+            _ => (1.0, 0.0, x)
+        };
+        return $"#{(int)Math.Round(r * 255):x2}{(int)Math.Round(g * 255):x2}{(int)Math.Round(b * 255):x2}";
     }
 
     private string TimeDisplay => Format(Session.Elapsed);
@@ -390,6 +458,7 @@
     void OnMouseUp(MouseEventArgs _)
     {
         isDragging = false;
+        dragWheel = null;
     }
 
     void HandleGridKeyDown(KeyboardEventArgs e)
