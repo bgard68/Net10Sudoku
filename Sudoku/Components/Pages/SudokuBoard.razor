@@ -1,11 +1,12 @@
 @page "/"
 @using Sudoku.Application.Interfaces
 @using Sudoku.Application.Models
+@using Sudoku.Application.Services
 @using Sudoku.Domain
 @using Sudoku.Services
 @inject IGameService Sudoku
+@inject GameSession Session
 @inject ThemeService ThemeService
-@inject GameStorage Storage
 @implements IDisposable
 
 <PageTitle>Sudoku Game</PageTitle>
@@ -18,27 +19,27 @@
 
 <div class="sudoku-root @(ThemeService.IsDarkMode ? "dark-mode" : "")" @onmouseup="OnMouseUp">
     <div class="toolbar">
-        <button class="btn diff easy" disabled="@isGenerating" @onclick="(() => NewGame(Difficulty.Easy))">Easy</button>
-        <button class="btn diff med" disabled="@isGenerating" @onclick="(() => NewGame(Difficulty.Medium))">Medium</button>
-        <button class="btn diff hard" disabled="@isGenerating" @onclick="(() => NewGame(Difficulty.Hard))">Hard</button>
-        <button class="btn diff pro" disabled="@isGenerating" @onclick="(() => NewGame(Difficulty.Professional))">Professional</button>
+        <button class="btn diff easy" disabled="@Session.IsGenerating" @onclick="(() => NewGame(Difficulty.Easy))">Easy</button>
+        <button class="btn diff med" disabled="@Session.IsGenerating" @onclick="(() => NewGame(Difficulty.Medium))">Medium</button>
+        <button class="btn diff hard" disabled="@Session.IsGenerating" @onclick="(() => NewGame(Difficulty.Hard))">Hard</button>
+        <button class="btn diff pro" disabled="@Session.IsGenerating" @onclick="(() => NewGame(Difficulty.Professional))">Professional</button>
         <span class="spacer"></span>
-        <button class="btn action undo" disabled="@(isGenerating || !Sudoku.CanUndo)" @onclick="Undo" title="Undo last action">Undo</button>
-        <button class="btn action redo" disabled="@(isGenerating || !Sudoku.CanRedo)" @onclick="Redo" title="Redo undone action">Redo</button>
-        <button class="btn action validate" disabled="@isGenerating" @onclick="Validate">Validate</button>
-        <button class="btn action hint" disabled="@isGenerating" @onclick="ApplyHint">Hint</button>
-        <button class="btn action solve" disabled="@isGenerating" @onclick="Solve">Solve</button>
-        <button class="btn action clear-all" disabled="@isGenerating" @onclick="ClearAll">Clear All</button>
+        <button class="btn action undo" disabled="@(Session.IsGenerating || !Sudoku.CanUndo)" @onclick="Undo" title="Undo last action">Undo</button>
+        <button class="btn action redo" disabled="@(Session.IsGenerating || !Sudoku.CanRedo)" @onclick="Redo" title="Redo undone action">Redo</button>
+        <button class="btn action validate" disabled="@Session.IsGenerating" @onclick="Validate">Validate</button>
+        <button class="btn action hint" disabled="@Session.IsGenerating" @onclick="ApplyHint">Hint</button>
+        <button class="btn action solve" disabled="@Session.IsGenerating" @onclick="Solve">Solve</button>
+        <button class="btn action clear-all" disabled="@Session.IsGenerating" @onclick="ClearAll">Clear All</button>
     </div>
 
     @* One tab stop for the whole grid; arrows move the active cell and
        aria-activedescendant tells assistive tech which cell that is. *@
-    <div class="board @(isSolved ? "celebration" : "")"
+    <div class="board @(Session.IsSolved ? "celebration" : "")"
          role="grid"
          tabindex="0"
          aria-label="Sudoku grid"
          aria-activedescendant="@ActiveDescendant"
-         @key="boardKey"
+         @key="Session.BoardVersion"
          @onkeydown="HandleGridKeyDown"
          @onmouseleave="EndDrag">
         @for (var row = 0; row < 9; row++)
@@ -87,7 +88,7 @@
 
     <NumberPad DigitDone="view.DigitDone"
                NotesMode="Sudoku.NotesMode"
-               Disabled="isGenerating"
+               Disabled="Session.IsGenerating"
                OnPlace="Place"
                OnToggleNotes="ToggleNotes"
                OnClear="Clear" />
@@ -98,19 +99,19 @@
                    SelectedText="@SelectedText"
                    NotesMode="Sudoku.NotesMode" />
 
-    @if (isSolved)
+    @if (Session.IsSolved)
     {
         <WinBanner TimeDisplay="@TimeDisplay"
-                   NewBest="newBest"
-                   AutoSolved="usedAutoSolve"
+                   NewBest="Session.NewBest"
+                   AutoSolved="Session.UsedAutoSolve"
                    BestDisplay="@BestDisplay"
                    Mistakes="Sudoku.Mistakes" />
         <Celebration />
     }
 
-    @if (message is not null && !isSolved)
+    @if (Session.Message is not null && !Session.IsSolved)
     {
-        <div class="message">@message</div>
+        <div class="message">@Session.Message</div>
     }
 </div>
 
@@ -118,21 +119,10 @@
     private sealed record BoardView(bool[,] Conflicts, bool[] DigitDone);
 
     private bool isDragging;
-    private bool isGenerating;
-    private string? message;
-    private int boardKey = 0;
-    private bool isSolved = false;
-    private Difficulty currentDifficulty = Difficulty.Easy;
     private System.Timers.Timer? clock;
-    private DateTime startedUtc = DateTime.UtcNow;
-    private TimeSpan elapsed;
-    private int clockTicks;
-    private TimeSpan? bestTime;
-    private bool newBest;
-    private bool usedAutoSolve;
 
-    private string TimeDisplay => Format(elapsed);
-    private string? BestDisplay => bestTime is TimeSpan best ? Format(best) : null;
+    private string TimeDisplay => Format(Session.Elapsed);
+    private string? BestDisplay => Session.BestTime is TimeSpan best ? Format(best) : null;
     private string SelectedText => Sudoku.Selected is Position sp ? $"({sp.Row + 1},{sp.Col + 1})" : "none";
     private static string Format(TimeSpan t) => $"{(int)t.TotalMinutes:00}:{t.Seconds:00}";
     private string? ActiveDescendant => Sudoku.Selected is Position p ? CellId(p.Row, p.Col) : null;
@@ -143,14 +133,11 @@
         ThemeService.OnThemeChanged += OnThemeChanged;
 
         clock = new System.Timers.Timer(500);
-        // The Elapsed callback fires on a timer thread; all component state is
-        // touched inside InvokeAsync so it stays on the renderer's context.
-        clock.Elapsed += (_, _) => _ = InvokeAsync(() =>
+        // The Elapsed callback fires on a timer thread; everything runs inside
+        // InvokeAsync so state is only touched on the renderer's context.
+        clock.Elapsed += (_, _) => _ = InvokeAsync(async () =>
         {
-            if (isSolved || isGenerating) return;
-            elapsed = DateTime.UtcNow - startedUtc;
-            // Persist the running clock every ~10s so a refresh loses at most that.
-            if (++clockTicks % 20 == 0) _ = PersistAsync();
+            await Session.TickAsync();
             StateHasChanged();
         });
         clock.Start();
@@ -161,44 +148,9 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
-
-        var saved = await Storage.LoadGameAsync();
-        if (saved is not null && TryRestore(saved))
-        {
-            await LoadBestAsync(currentDifficulty);
-            StateHasChanged();
-            return;
-        }
-
-        await NewGame(Difficulty.Easy);
+        await Session.InitializeAsync();
         StateHasChanged();
     }
-
-    private bool TryRestore(GameSnapshot saved)
-    {
-        try
-        {
-            // ToBoard throws on malformed data; stored state is outside our
-            // control, so any failure just means "no saved game".
-            var board = saved.ToBoard();
-            Sudoku.Restore(board, saved.Mistakes);
-            currentDifficulty = saved.Difficulty;
-            elapsed = TimeSpan.FromSeconds(Math.Max(0, saved.ElapsedSeconds));
-            startedUtc = DateTime.UtcNow - elapsed;
-            isSolved = false;
-            boardKey++;
-            message = "Restored your saved game.";
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private Task PersistAsync() => isSolved
-        ? Storage.ClearGameAsync()
-        : Storage.SaveGameAsync(GameSnapshot.Capture(Sudoku.Current, elapsed, currentDifficulty, Sudoku.Mistakes));
 
     private void OnThemeChanged()
     {
@@ -213,30 +165,7 @@
 
     async Task NewGame(Difficulty d)
     {
-        if (isGenerating) return;
-        isGenerating = true;
-        isSolved = false;
-        message = $"Generating {d} puzzle...";
-        StateHasChanged();
-
-        await Sudoku.NewAsync(d);
-
-        isGenerating = false;
-        currentDifficulty = d;
-        boardKey++;
-        startedUtc = DateTime.UtcNow;
-        elapsed = TimeSpan.Zero;
-        newBest = false;
-        usedAutoSolve = false;
-        message = $"New {d} puzzle generated.";
-        await PersistAsync();
-        await LoadBestAsync(d);
-    }
-
-    private async Task LoadBestAsync(Difficulty d)
-    {
-        var seconds = await Storage.LoadBestSecondsAsync(d);
-        bestTime = seconds is int s ? TimeSpan.FromSeconds(s) : null;
+        await Session.StartNewAsync(d);
     }
 
     void HandleClick(int r, int c)
@@ -260,40 +189,40 @@
 
     void Place(int n)
     {
-        if (isGenerating) return;
+        if (Session.IsGenerating) return;
         Sudoku.Place(n);
         CheckIfSolved();
-        _ = PersistAsync();
+        _ = Session.PersistAsync();
     }
 
     void Clear()
     {
-        if (isGenerating) return;
+        if (Session.IsGenerating) return;
         Sudoku.Clear();
-        isSolved = false;
-        _ = PersistAsync();
+        Session.ResetSolved();
+        _ = Session.PersistAsync();
     }
 
     void ClearAll()
     {
         Sudoku.ClearAll();
-        message = "All user entries cleared.";
-        isSolved = false;
-        _ = PersistAsync();
+        Session.Message = "All user entries cleared.";
+        Session.ResetSolved();
+        _ = Session.PersistAsync();
     }
 
     void Undo()
     {
         Sudoku.Undo();
-        isSolved = false;
-        _ = PersistAsync();
+        Session.ResetSolved();
+        _ = Session.PersistAsync();
     }
 
     void Redo()
     {
         Sudoku.Redo();
         CheckIfSolved();
-        _ = PersistAsync();
+        _ = Session.PersistAsync();
     }
 
     void ToggleNotes()
@@ -306,11 +235,11 @@
         bool isValid = Sudoku.Validate();
         if (isValid && Sudoku.IsComplete())
         {
-            MarkSolved();
+            Session.MarkSolved();
         }
         else
         {
-            message = isValid ? "Board is valid so far." : "There are conflicts.";
+            Session.Message = isValid ? "Board is valid so far." : "There are conflicts.";
         }
     }
 
@@ -318,22 +247,7 @@
     {
         if (Sudoku.IsComplete())
         {
-            MarkSolved();
-        }
-    }
-
-    void MarkSolved()
-    {
-        isSolved = true;
-        message = null;
-        elapsed = DateTime.UtcNow - startedUtc;
-
-        // Auto-solved games never set records - the record belongs to the player.
-        if (!usedAutoSolve && (bestTime is null || elapsed < bestTime))
-        {
-            newBest = true;
-            bestTime = elapsed;
-            _ = Storage.SaveBestSecondsAsync(currentDifficulty, (int)elapsed.TotalSeconds);
+            Session.MarkSolved();
         }
     }
 
@@ -341,7 +255,7 @@
     {
         if (Sudoku.Selected is null)
         {
-            message = "Please select a cell first to get a hint.";
+            Session.Message = "Please select a cell first to get a hint.";
             return;
         }
 
@@ -350,37 +264,31 @@
         if (hint is null)
         {
             var cell = Sudoku.Current[Sudoku.Selected.Value.Row, Sudoku.Selected.Value.Col];
-            if (cell.IsGiven)
-            {
-                message = "Cannot provide hint for given cells.";
-            }
-            else
-            {
-                message = "Unable to determine hint for this cell.";
-            }
+            Session.Message = cell.IsGiven
+                ? "Cannot provide hint for given cells."
+                : "Unable to determine hint for this cell.";
             return;
         }
 
         Sudoku.ApplyHintForSelectedCell();
-        message = $"Hint: placed {hint.Value.value} in the selected cell";
+        Session.Message = $"Hint: placed {hint.Value.value} in the selected cell";
 
         CheckIfSolved();
-        _ = PersistAsync();
+        _ = Session.PersistAsync();
     }
 
     void Solve()
     {
-        usedAutoSolve = true;
-        bool solved = Sudoku.Solve();
-        if (solved)
+        Session.MarkAutoSolveUsed();
+        if (Sudoku.Solve())
         {
-            MarkSolved();
+            Session.MarkSolved();
         }
         else
         {
-            message = "No solution.";
+            Session.Message = "No solution.";
         }
-        _ = PersistAsync();
+        _ = Session.PersistAsync();
     }
 
     void EndDrag()
@@ -395,7 +303,7 @@
 
     void HandleGridKeyDown(KeyboardEventArgs e)
     {
-        if (isGenerating || e.Key is null) return;
+        if (Session.IsGenerating || e.Key is null) return;
 
         var pos = Sudoku.Selected ?? new Position(0, 0);
         switch (e.Key)
@@ -496,5 +404,4 @@
         string borderClasses = (r % 3 == 0 ? " top3" : "") + (c % 3 == 0 ? " left3" : "") + (r == 8 ? " bottom3" : "") + (c == 8 ? " right3" : "");
         return $"cell{(cell.IsGiven ? " given" : "")}{(isSelected ? " selected" : "")}{(sameRow ? " rowhl" : "")}{(sameCol ? " colhl" : "")}{(sameBlock ? " blockhl" : "")}{(sameValue ? " valhl" : "")}{(hasConflict ? " conflict" : "")}{borderClasses}";
     }
-
 }

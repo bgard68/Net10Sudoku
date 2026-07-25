@@ -19,6 +19,9 @@ builder.Services.AddInfrastructure();
 // so one visitor toggling dark mode would change the theme for all of them.
 builder.Services.AddScoped<ThemeService>();
 builder.Services.AddScoped<GameStorage>();
+// Same instance behind the application's persistence port.
+builder.Services.AddScoped<Sudoku.Application.Interfaces.IGameStore>(sp => sp.GetRequiredService<GameStorage>());
+builder.Services.AddSingleton(TimeProvider.System);
 
 var app = builder.Build();
 

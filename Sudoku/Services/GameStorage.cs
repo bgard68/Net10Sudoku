@@ -1,12 +1,14 @@
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using Sudoku.Application.Interfaces;
 using Sudoku.Application.Models;
 
 namespace Sudoku.Services;
 
-// Persists the in-progress game and theme choice in the browser so a page
-// refresh or circuit reset does not lose them. Storage failures are swallowed:
-// persistence is best-effort and must never break gameplay.
-public sealed class GameStorage
+// Adapter for the IGameStore port over protected browser storage, plus the
+// theme preference (a purely UI concern, so not part of the port). Storage
+// failures are swallowed: persistence is best-effort and must never break
+// gameplay.
+public sealed class GameStorage : IGameStore
 {
     private const string GameKey = "sudoku.game";
     private const string ThemeKey = "sudoku.darkmode";

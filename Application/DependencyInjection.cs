@@ -10,6 +10,7 @@ public static class DependencyInjection
     {
         // Scoped = per Blazor circuit, i.e. one game per connected player.
         services.AddScoped<IGameService, SudokuService>();
+        services.AddScoped<GameSession>();
         return services;
     }
 }
