@@ -25,6 +25,16 @@ public sealed class SudokuGenerator : ISudokuGenerator
         FillDiagonalBoxes(board);
         _solver.TrySolve(board);
 
+        // Capture the completed grid before digging. Because every removal below is
+        // reverted unless the board still has exactly one solution, this stays the
+        // puzzle's unique answer and lets hints avoid re-solving a board the player
+        // may have entered wrong values into.
+        var solution = new int[9,9];
+        for (int r = 0; r < 9; r++)
+        for (int c = 0; c < 9; c++)
+            solution[r,c] = board.Get(r,c) ?? 0;
+        board.SetSolution(solution);
+
         // Remove numbers based on difficulty while keeping a unique solution (simple heuristic).
         int removals = difficulty switch
         {

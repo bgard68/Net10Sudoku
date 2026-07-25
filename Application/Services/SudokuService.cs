@@ -12,12 +12,11 @@ public sealed class SudokuService
     private readonly ISudokuHintProvider _hints;
     private readonly IConflictDetector _conflicts;
     private readonly IGameState _state;
-    private readonly IHintOrchestrator _hintOrchestrator;
 
     public Board Current { get => _state.Current; private set => _state.Current = value; }
     public Position? Selected { get => _state.Selected; private set => _state.Selected = value; }
 
-    public SudokuService(ISudokuGenerator generator, ISudokuSolver solver, ISudokuValidator validator, ISudokuHintProvider hints, IConflictDetector conflicts, IGameState state, IHintOrchestrator hintOrchestrator)
+    public SudokuService(ISudokuGenerator generator, ISudokuSolver solver, ISudokuValidator validator, ISudokuHintProvider hints, IConflictDetector conflicts, IGameState state)
     {
         _generator = generator;
         _solver = solver;
@@ -25,7 +24,6 @@ public sealed class SudokuService
         _hints = hints;
         _conflicts = conflicts;
         _state = state;
-        _hintOrchestrator = hintOrchestrator;
     }
 
     public void New(Difficulty difficulty)
@@ -72,7 +70,21 @@ public sealed class SudokuService
 
     public bool Solve()
     {
-        var copy = Current.Clone();
+        // Fill from the recorded solution when we have one. Solving the live board
+        // would fail as soon as the player has entered a wrong value.
+        if (Current.HasSolution)
+        {
+            for (int r = 0; r < 9; r++)
+            for (int c = 0; c < 9; c++)
+            {
+                var v = Current.SolutionAt(r, c);
+                if (v is > 0 && !Current.Cells[r, c].IsGiven)
+                    Current.Set(r, c, v.Value);
+            }
+            return true;
+        }
+
+        var copy = GivensOnly(Current);
         var ok = _solver.TrySolve(copy);
         if (ok)
         {
@@ -87,26 +99,43 @@ public sealed class SudokuService
     public (Position pos, int value)? GetHintForSelectedCell()
     {
         if (Selected is null) return null;
-        
+
         var (r, c) = Selected.Value;
         var cell = Current.Cells[r, c];
-        
+
         // Can't provide hint for given cells
         if (cell.IsGiven) return null;
-        
-        // If cell already has a value, we need to solve to find the correct one
-        // Create a copy of the board and solve it to get the correct answer
-        var copy = Current.Clone();
-        if (_solver.TrySolve(copy))
+
+        // Prefer the solution captured at generation time. Solving the live board
+        // instead would fail outright once the player has entered a wrong value
+        // anywhere, and would only ever echo back whatever is already in this cell.
+        var known = Current.SolutionAt(r, c);
+        if (known is > 0) return (new Position(r, c), known.Value);
+
+        // Fallback for boards with no recorded solution (e.g. one built by hand in a
+        // test): solve from the givens only, ignoring the player's entries.
+        var fromGivens = GivensOnly(Current);
+        if (_solver.TrySolve(fromGivens))
         {
-            var correctValue = copy.Get(r, c);
+            var correctValue = fromGivens.Get(r, c);
             if (correctValue.HasValue)
-            {
                 return (new Position(r, c), correctValue.Value);
-            }
         }
-        
+
         return null;
+    }
+
+    // A copy holding only the puzzle's clues, so solving is unaffected by user entries.
+    private static Board GivensOnly(Board board)
+    {
+        var bare = new Board();
+        for (int r = 0; r < 9; r++)
+        for (int c = 0; c < 9; c++)
+        {
+            if (board.Cells[r, c].IsGiven)
+                bare.Cells[r, c].Set(board.Get(r, c), given: true);
+        }
+        return bare;
     }
 
     public void ApplyHint()

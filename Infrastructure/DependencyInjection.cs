@@ -12,7 +12,6 @@ public static class DependencyInjection
         services.AddSingleton<ISudokuHintProvider, SudokuHintProvider>();
         services.AddSingleton<ISudokuGenerator, SudokuGenerator>();
         services.AddSingleton<IConflictDetector, ConflictDetector>();
-        services.AddSingleton<IHintOrchestrator, Sudoku.Infrastructure.Implementations.HintOrchestrator>();
         return services;
     }
 }
