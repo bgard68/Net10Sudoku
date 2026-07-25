@@ -6,18 +6,77 @@ namespace Sudoku.Infrastructure;
 
 public sealed class SudokuGenerator : ISudokuGenerator
 {
+    // Carving is cheap next to the value of an on-band puzzle, so retry generously.
+    // Hard boards land in band roughly every other attempt; the cap is a backstop.
+    private const int MaxAttempts = 60;
+
     private readonly ISudokuSolver _solver;
     private readonly ISudokuValidator _validator;
+    private readonly IPuzzleGrader _grader;
     // Random is not thread-safe; Random.Shared is thread-safe for concurrent Next() calls
     private static Random Rng => Random.Shared;
 
-    public SudokuGenerator(ISudokuSolver solver, ISudokuValidator validator)
+    public SudokuGenerator(ISudokuSolver solver, ISudokuValidator validator, IPuzzleGrader grader)
     {
         _solver = solver;
         _validator = validator;
+        _grader = grader;
     }
 
+    // Clue count alone is a poor proxy for difficulty - about half of the boards dug
+    // to "Hard" depth fall to singles. So each candidate is graded by the techniques
+    // it actually requires, and carving repeats until the grade lands in the band.
     public Board Generate(Difficulty difficulty)
+    {
+        Board? closest = null;
+        int closestDistance = int.MaxValue;
+
+        for (int attempt = 0; attempt < MaxAttempts; attempt++)
+        {
+            var board = Carve(Removals(difficulty));
+            var tier = _grader.Grade(board);
+            if (InBand(difficulty, tier)) return board;
+
+            var distance = DistanceToBand(difficulty, tier);
+            if (distance < closestDistance)
+            {
+                closestDistance = distance;
+                closest = board;
+            }
+        }
+
+        // Every carved candidate is verified unique, so the nearest miss is still a
+        // sound puzzle - just outside the ideal difficulty band.
+        return closest!;
+    }
+
+    private static int Removals(Difficulty difficulty) => difficulty switch
+    {
+        Difficulty.Easy => 40,
+        Difficulty.Medium => 50,
+        Difficulty.Hard => 55,
+        Difficulty.Professional => 60,
+        _ => 50
+    };
+
+    // Hard and Professional both demand more than the cheap techniques; they differ
+    // by how many clues remain to work with.
+    private static bool InBand(Difficulty difficulty, TechniqueTier tier) => difficulty switch
+    {
+        Difficulty.Easy => tier == TechniqueTier.Singles,
+        Difficulty.Medium => tier is TechniqueTier.LockedCandidate or TechniqueTier.Pair,
+        _ => tier == TechniqueTier.Advanced
+    };
+
+    private static int DistanceToBand(Difficulty difficulty, TechniqueTier tier) => difficulty switch
+    {
+        Difficulty.Easy => (int)tier,
+        Difficulty.Medium => Math.Min(Math.Abs((int)tier - (int)TechniqueTier.LockedCandidate),
+                                      Math.Abs((int)tier - (int)TechniqueTier.Pair)),
+        _ => (int)TechniqueTier.Advanced - (int)tier
+    };
+
+    private Board Carve(int removals)
     {
         var board = new Board();
 
@@ -35,16 +94,7 @@ public sealed class SudokuGenerator : ISudokuGenerator
             solution[r,c] = board.Get(r,c) ?? 0;
         board.SetSolution(solution);
 
-        // Remove numbers based on difficulty while keeping a unique solution (simple heuristic).
-        int removals = difficulty switch
-        {
-            Difficulty.Easy => 40,
-            Difficulty.Medium => 50,
-            Difficulty.Hard => 55,
-            Difficulty.Professional => 60,
-            _ => 50
-        };
-
+        // Remove numbers while keeping a unique solution.
         var positions = Enumerable.Range(0,81).OrderBy(_ => Rng.Next()).ToList();
         foreach (var idx in positions)
         {

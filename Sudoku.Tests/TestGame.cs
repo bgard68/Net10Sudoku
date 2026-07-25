@@ -13,7 +13,7 @@ internal static class TestGame
 
     public static SudokuSolver Solver(SudokuValidator validator) => new(validator);
 
-    public static SudokuGenerator Generator(SudokuValidator validator, SudokuSolver solver) => new(solver, validator);
+    public static SudokuGenerator Generator(SudokuValidator validator, SudokuSolver solver) => new(solver, validator, new PuzzleGrader());
 
     public static SudokuService Service()
     {

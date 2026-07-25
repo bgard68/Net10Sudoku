@@ -9,6 +9,7 @@ public static class DependencyInjection
     {
         services.AddSingleton<ISudokuValidator, SudokuValidator>();
         services.AddSingleton<ISudokuSolver, SudokuSolver>();
+        services.AddSingleton<IPuzzleGrader, PuzzleGrader>();
         services.AddSingleton<ISudokuHintProvider, SudokuHintProvider>();
         services.AddSingleton<ISudokuGenerator, SudokuGenerator>();
         services.AddSingleton<IConflictDetector, ConflictDetector>();
