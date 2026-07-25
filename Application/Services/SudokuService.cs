@@ -60,6 +60,14 @@ public sealed class SudokuService
         _redo.Clear();
     }
 
+    // Adopt a board restored from persisted state (e.g. after a page refresh).
+    // History intentionally starts empty - undo cannot reach past the reload.
+    public void Restore(Board board)
+    {
+        Current = board;
+        StartFresh();
+    }
+
     public void ClearSelection() => Selected = null;
 
     public void Select(int row, int col) => Selected = new Position(row, col);

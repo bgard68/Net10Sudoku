@@ -5,6 +5,7 @@
 @using Sudoku.Services
 @inject SudokuService Sudoku
 @inject ThemeService ThemeService
+@inject GameStorage Storage
 @implements IDisposable
 
 <PageTitle>Sudoku Game</PageTitle>
@@ -162,16 +163,18 @@
     private string? message;
     private int boardKey = 0;
     private bool isSolved = false;
+    private Difficulty currentDifficulty = Difficulty.Easy;
     private IReadOnlyList<Starburst> fireworks = Array.Empty<Starburst>();
     private System.Timers.Timer? clock;
     private DateTime startedUtc = DateTime.UtcNow;
     private TimeSpan elapsed;
+    private int clockTicks;
 
     private string TimeDisplay => $"{(int)elapsed.TotalMinutes:00}:{elapsed.Seconds:00}";
     private string? ActiveDescendant => Sudoku.Selected is Position p ? CellId(p.Row, p.Col) : null;
     private static string CellId(int r, int c) => $"cell-{r}-{c}";
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         ThemeService.OnThemeChanged += OnThemeChanged;
 
@@ -180,12 +183,55 @@
         {
             if (isSolved || isGenerating) return;
             elapsed = DateTime.UtcNow - startedUtc;
+            // Persist the running clock every ~10s so a refresh loses at most that.
+            if (++clockTicks % 20 == 0) _ = InvokeAsync(PersistAsync);
             _ = InvokeAsync(StateHasChanged);
         };
         clock.Start();
+    }
+
+    // Browser storage needs JS interop, which is unavailable until after the first
+    // interactive render - so game start (restore or fresh puzzle) happens here.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        var saved = await Storage.LoadGameAsync();
+        if (saved is not null && TryRestore(saved))
+        {
+            StateHasChanged();
+            return;
+        }
 
         await NewGame(Difficulty.Easy);
+        StateHasChanged();
     }
+
+    private bool TryRestore(GameSnapshot saved)
+    {
+        try
+        {
+            // ToBoard throws on malformed data; stored state is outside our
+            // control, so any failure just means "no saved game".
+            var board = saved.ToBoard();
+            Sudoku.Restore(board);
+            currentDifficulty = saved.Difficulty;
+            elapsed = TimeSpan.FromSeconds(Math.Max(0, saved.ElapsedSeconds));
+            startedUtc = DateTime.UtcNow - elapsed;
+            isSolved = false;
+            boardKey++;
+            message = "Restored your saved game.";
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private Task PersistAsync() => isSolved
+        ? Storage.ClearGameAsync()
+        : Storage.SaveGameAsync(GameSnapshot.Capture(Sudoku.Current, elapsed, currentDifficulty));
 
     private void OnThemeChanged()
     {
@@ -209,10 +255,12 @@
         await Sudoku.NewAsync(d);
 
         isGenerating = false;
+        currentDifficulty = d;
         boardKey++;
         startedUtc = DateTime.UtcNow;
         elapsed = TimeSpan.Zero;
         message = $"New {d} puzzle generated.";
+        await PersistAsync();
     }
 
     void HandleClick(int r, int c)
@@ -239,6 +287,7 @@
         if (isGenerating) return;
         Sudoku.Place(n);
         CheckIfSolved();
+        _ = PersistAsync();
     }
 
     void Clear()
@@ -246,6 +295,7 @@
         if (isGenerating) return;
         Sudoku.Clear();
         isSolved = false;
+        _ = PersistAsync();
     }
 
     void ClearAll()
@@ -253,18 +303,21 @@
         Sudoku.ClearAll();
         message = "All user entries cleared.";
         isSolved = false;
+        _ = PersistAsync();
     }
 
     void Undo()
     {
         Sudoku.Undo();
         isSolved = false;
+        _ = PersistAsync();
     }
 
     void Redo()
     {
         Sudoku.Redo();
         CheckIfSolved();
+        _ = PersistAsync();
     }
 
     void ToggleNotes()
@@ -328,6 +381,7 @@
         message = $"Hint: placed {hint.Value.value} in the selected cell";
 
         CheckIfSolved();
+        _ = PersistAsync();
     }
 
     void Solve()
@@ -341,6 +395,7 @@
         {
             message = "No solution.";
         }
+        _ = PersistAsync();
     }
 
     void EndDrag()

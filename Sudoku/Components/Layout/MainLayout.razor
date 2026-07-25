@@ -1,6 +1,7 @@
 ﻿@using Sudoku.Services
 @inherits LayoutComponentBase
 @inject ThemeService ThemeService
+@inject GameStorage Storage
 @implements IDisposable
 
 <div class="page @(ThemeService.IsDarkMode ? "dark-mode" : "")">
@@ -28,9 +29,19 @@
         ThemeService.OnThemeChanged += OnThemeChanged;
     }
 
+    // Browser storage needs JS interop, so the persisted theme can only be
+    // applied after the first interactive render.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        var dark = await Storage.LoadDarkModeAsync();
+        if (dark is bool value) ThemeService.SetDarkMode(value);
+    }
+
     private void OnThemeChanged()
     {
         InvokeAsync(StateHasChanged);
+        _ = Storage.SaveDarkModeAsync(ThemeService.IsDarkMode);
     }
 
     public void Dispose()

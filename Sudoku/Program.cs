@@ -18,6 +18,7 @@ builder.Services.AddInfrastructure();
 // Scoped, not singleton: in Blazor Server a singleton is shared by every circuit,
 // so one visitor toggling dark mode would change the theme for all of them.
 builder.Services.AddScoped<ThemeService>();
+builder.Services.AddScoped<GameStorage>();
 
 var app = builder.Build();
 

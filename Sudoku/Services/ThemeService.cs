@@ -23,4 +23,10 @@ public class ThemeService
     {
         IsDarkMode = !IsDarkMode;
     }
+
+    // Adopt a persisted preference (no-op when it already matches).
+    public void SetDarkMode(bool darkMode)
+    {
+        IsDarkMode = darkMode;
+    }
 }
