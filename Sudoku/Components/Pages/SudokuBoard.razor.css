@@ -156,7 +156,11 @@
 
 .cell.rowhl:not(.selected):not(.conflict){background:rgba(70,70,90,0.6);color:#ffffff;box-shadow:none}
 .cell.colhl:not(.selected):not(.conflict){background:rgba(70,70,90,0.6);color:#ffffff;box-shadow:none}
-.cell.blockhl{background:transparent;box-shadow:none}
+/* Drawn on the cells themselves. An absolutely-positioned overlay cannot line
+   up with the block: the 4px 3x3 separators make the column pitch non-uniform
+   (57px vs 54px), and at fractional device-pixel ratios those borders land on
+   sub-pixel boundaries. Tinting the cells is exact at any zoom or DPR. */
+.cell.blockhl:not(.selected):not(.conflict):not(.valhl):not(.rowhl):not(.colhl){background:rgba(70,70,90,0.3)}
 
 .cell.conflict{animation:conflictpulse 1.5s ease-in-out infinite;background:#4a0000;color:#ff6b6b;font-weight:bold}
 @keyframes conflictpulse {
@@ -172,17 +176,6 @@
     color:#ffffff;
     text-shadow:0 0 6px rgba(255,255,255,0.7);
     filter:saturate(1.25) brightness(1.2);
-}
-
-/* Selected 3x3 block overlay */
-.block-overlay{
-    position:absolute;
-    width:158px; /* 52*3 + 2px internal borders */
-    height:158px;
-    background:rgba(70,70,90,0.55);
-    box-shadow:0 0 0 3px rgba(160,160,190,0.6), 0 0 20px rgba(160,160,200,0.55);
-    pointer-events:none;
-    border-radius:4px;
 }
 
 /* Pencil marks: a 3x3 mini-grid of candidate digits inside an empty cell.

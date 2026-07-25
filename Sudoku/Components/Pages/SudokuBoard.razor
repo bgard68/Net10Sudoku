@@ -77,14 +77,6 @@
                 }
             </div>
         }
-        @if (Sudoku.Selected is Position sel)
-        {
-            var blockRow = (sel.Row / 3) * 3;
-            var blockCol = (sel.Col / 3) * 3;
-            var topPx = blockRow * 52 + blockRow; // add 1px per preceding row border
-            var leftPx = blockCol * 52 + blockCol;
-            <div class="block-overlay" style="top:@(topPx)px;left:@(leftPx)px;"></div>
-        }
     </div>
 
     <div class="side-panel">
