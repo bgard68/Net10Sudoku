@@ -78,6 +78,36 @@ suite stayed green, since unit tests never boot the host. The smoke test
 runs the built app and fetches those exact files, so that whole class of
 configuration regression now fails a build in seconds.
 
+## Browser verification
+
+Rendering, layout and interaction claims cannot be seen by a unit test or by
+the smoke test, so they are settled in a real browser. The method below is
+not ceremony - every rule on it exists because skipping it produced a wrong
+answer at least once ([lessons learned](lessons-learned.md)).
+
+- **Drive real input.** Clicks resolved through the compositor, never
+  `element.click()` or a constructed event. Dispatched events skip hit
+  testing entirely, which is exactly where `pointer-events:none`, overlays
+  and z-order bugs live.
+- **Wait for the round-trip.** Blazor Server turns every interaction into a
+  WebSocket round-trip. An assertion made in the same breath as the click
+  reads the *previous* DOM and will call a working feature broken.
+- **Measure, do not eyeball.** Geometry is answered with
+  `getBoundingClientRect()` and `scrollWidth` against `clientWidth`, not by
+  reading pixels off a screenshot - screenshots are scaled by
+  `devicePixelRatio`, and the element may not even be in view.
+- **Prove the fix in the live page first.** Setting the candidate property on
+  the running DOM and re-measuring turns "this should fix it" into a
+  measurement before a single line is edited.
+- **Confirm the input landed.** When an interaction appears to do nothing, a
+  temporary listener reporting `isTrusted` and the event offsets separates
+  "the app is broken" from "the harness missed the target".
+
+What that looks like in practice for this app: load the HTTP profile and
+confirm a puzzle generates and the clock advances (proof the circuit is
+live), click a cell and place a digit, toggle Notes, navigate away and back
+to confirm the saved game restores, and read the console for exceptions.
+
 ## The pipeline (`.github/workflows/ci.yml`)
 
 Two independent jobs on every push and PR to `main`:

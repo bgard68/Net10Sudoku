@@ -58,6 +58,22 @@ CI on every push ([details](testing.md)).
 **Lesson:** Unit tests cannot see hosting. Something in the pipeline must
 actually start the application.
 
+### Dead controls on the HTTP launch profile
+**Bug:** Started on the default `http` profile (port 5260) the page rendered,
+but nothing worked - no puzzle appeared and every button was inert.
+`UseHttpsRedirection()` ran unconditionally and antiforgery kept its default
+`Secure` cookie policy, so over plain HTTP the cookie was never sent back and
+the interactive circuit was rejected with a 400.
+**Found:** Reading `Program.cs` against `launchSettings.json` - the default
+profile is HTTP-only while the pipeline assumed HTTPS.
+**Fix:** `UseHttpsRedirection()` moved inside the non-Development branch, and
+antiforgery uses `CookieSecurePolicy.SameAsRequest` in Development.
+**Verified:** Loaded `http://localhost:5260` in a real browser: a puzzle
+generated, the clock ticked, Notes toggled, digits placed. None of that
+happens without a live circuit, so a playable board *is* the assertion.
+**Lesson:** A statically-rendered Blazor page is pixel-identical to a live one
+until you interact with it. "The page loads" is not "the app works".
+
 ### Blazor renders after async handlers - use it
 **Observation:** "Generating..." feedback needs no manual re-render
 plumbing: an async event handler yields at its first `await` and Blazor
@@ -73,6 +89,20 @@ timer thread before marshalling to Blazor's sync context.
 **Fix:** The whole callback body runs inside `InvokeAsync`.
 **Lesson:** In Blazor Server, *all* component state access belongs on the
 sync context - including the reads and increments that look harmless.
+
+### A clock that started before the circuit did
+**Bug:** The game timer was created and started in `OnInitialized`, which also
+runs during server prerender. That prerendered instance is torn down straight
+away, so its timer could fire against disposed state on a timer thread.
+**Found:** Reviewing the component lifecycle rather than from a crash - the
+window is narrow enough that it rarely bites, which is what makes it worth
+fixing before it does.
+**Fix:** The timer is created in `OnAfterRenderAsync(firstRender)`, alongside
+`Session.InitializeAsync()`. Both need a live interactive circuit; neither
+belongs in prerender.
+**Lesson:** `OnInitialized` runs twice in a prerendered Blazor Server app.
+Anything with a lifetime - timers, subscriptions, JS interop - belongs in the
+first *interactive* render, not the first render.
 
 ## Browser rendering
 
@@ -116,6 +146,83 @@ rule explaining why the obvious name is dangerous.
 scoped CSS - isolation namespaces per component, not per element role
 within a component. Name classes for what they style, not for the feature
 they belong to.
+
+### Mojibake from a Windows-1252 save
+**Bug:** The About page showed `9?9`, `3?3` and `complexity?easy` (each `?` a
+U+FFFD replacement glyph). The file had been saved as Windows-1252 but is
+served as UTF-8, so its `0xD7` (`x`) and `0x97` (em dash) bytes were invalid
+sequences. The Japanese text had already degraded to literal `?` in an earlier
+save.
+**Found:** Reading the file, then confirming at byte level - a histogram showed
+exactly three `0xD7` and two `0x97` and no other non-ASCII bytes in the file.
+**Fix:** Decoded as cp1252, restored the multiplication signs, em dashes and
+Japanese, re-saved as UTF-8 with the original CRLF endings.
+**Verified:** Rendered in a browser - `9x9 grid` and `3x3 subgrids` with real
+multiplication signs.
+**Lesson:** An editor that quietly saves in the system codepage produces a file
+that compiles, passes every test, and is wrong only to the reader. Check
+encoding at the byte level - `?` and the replacement glyph are data loss, not
+a display quirk.
+
+### The flex item that refused to shrink
+**Bug:** The About page overflowed sideways: a page-level horizontal scrollbar,
+with body text clipped mid-sentence at the right edge.
+**Found:** Measured in the live page - `documentElement.scrollWidth` 1384
+against `clientWidth` 1272, so 112px over. `main` is a flex item, and flex
+items default to `min-width:auto`, which refuses to shrink below the content's
+intrinsic width; the five-item timeline (5 x 180px plus gaps) set that floor.
+**Fix:** `min-width:0` on `main`.
+**Verified before writing it:** setting `main.style.minWidth='0'` in the
+running DOM dropped `scrollWidth` to exactly `clientWidth`, while
+`.timeline-section` kept scrolling inside its own `overflow-x:auto`. The edit
+was made only after the measurement agreed.
+**Lesson:** `min-width:auto` is the default that surprises people - an inner
+`overflow-x:auto` cannot rescue you if the flex ancestor never shrinks. And a
+one-line probe in the live DOM turns a CSS guess into a measurement.
+
+### The overlay that could never line up
+**Bug:** The selected 3x3 block was highlighted by an absolutely-positioned
+box, and it sat a few pixels off the block it was meant to cover.
+**Found:** Measured the real grid instead of trusting the arithmetic.
+`box-sizing` is `content-box` here, so a cell occupies 54px - except cells
+carrying a 4px 3x3 separator, which occupy 57px. The pitch is not uniform. The
+code assumed a flat 52px plus one border per row and produced 159px with a
+158px square, where the block actually starts at 163.7px and spans ~164px.
+Fractional device-pixel ratios shift it again.
+**Fix:** Deleted the overlay. The component already computed a `blockhl` class
+for every cell in the selected block, so the highlight is drawn on the cells
+themselves.
+**Lesson:** If a highlight has to line up with elements, draw it *on* those
+elements. A parallel pixel model is a second source of truth, and it drifts -
+with zoom, with device-pixel ratio, and with the next border change.
+
+### display:none sent the colour picker to the corner of the page
+**Bug:** Clicking a colour chip opened the native colour picker in the top-left
+corner of the page instead of beside the chip.
+**Found:** The `<input type="color">` was hidden with `display:none`. An element
+with `display:none` generates no box, so the browser has no anchor for the
+popup and falls back to the viewport origin.
+**Fix:** The input stays in the layout, stretched invisibly over the chip
+(`position:absolute; inset:0; opacity:0`).
+**Lesson:** Native popups anchor to their control's box. A control that still
+has to open UI must be made invisible, never boxless.
+
+### Streaming every frame of a native picker over the circuit
+**Bug:** The colour chip used `@oninput`, which fires continuously while the
+native picker is dragged - every frame became a round-trip. The hue wheels
+beside it were already rate-limited; the chip was not.
+**Fix:** `@oninput` is throttled to 40ms like the wheels, with `@onchange`
+committing the final value unthrottled so the chosen colour is never dropped.
+**Lesson:** `oninput` on a native picker is a stream, not an event. Throttle
+the stream, but keep an unthrottled commit or you lose the value the user
+actually picked.
+
+### A drag that never ended on touch
+**Bug:** Drag-select across cells was ended by `mouseup` and `mouseleave` only,
+so on a touch device the drag could stay armed after the finger lifted.
+**Fix:** The board also ends the drag on `pointerup` and `pointercancel`.
+**Lesson:** If an interaction starts from pointer events, end it from pointer
+events. Mouse events are not guaranteed to follow on touch.
 
 ## Cross-platform tooling
 
@@ -193,6 +300,37 @@ touched them.
 **Lesson:** Match the verification to the failure mode - and then, where
 possible, promote the manual check into an automated one (that is how the
 smoke test and the `GameSession` unit tests came to exist).
+
+### Reading the DOM before the round-trip landed
+**Bug (in the verification, not the app):** The colour wheels were reported
+broken - three real clicks on the ring, and the hex value did not change once.
+That conclusion was wrong. In Blazor Server every interaction is a network
+round-trip: the event goes to the server, the handler runs, and the DOM diff
+comes back over the WebSocket. The value was read in the same batch as the
+click, before any of that had happened, so it measured the pre-click DOM. Read
+a moment later it was `#00fffd` - exactly the cyan that ring position should
+produce. The feature had worked every time.
+**Fix / practice:** An assertion after an interaction has to wait for the
+update to arrive, not merely for the click to be dispatched.
+**Lesson:** Cause and effect are not simultaneous in a server-rendered UI. An
+assertion that races the transport will report a working feature as broken -
+so "I clicked it and nothing happened" is a claim about timing until proven
+otherwise. Reporting a bug that does not exist costs the same trust as missing
+one that does.
+
+### Screenshot pixels are not CSS pixels
+**Bug (in the verification):** Several clicks aimed from a screenshot missed
+entirely - one landed in a wheel's dead centre hole, another selected text
+instead of grabbing a control. The display ran at `devicePixelRatio` 1.128, so
+a 1456px-wide screenshot mapped onto a 1291px CSS viewport, and one target was
+below the fold entirely.
+**Fix / practice:** Take coordinates from `getBoundingClientRect()`, scroll the
+element into view first, and confirm the element actually received the event -
+a temporary listener reporting `isTrusted` and the exact offsets settles it in
+one step.
+**Lesson:** Reading coordinates off a scaled screenshot is guessing. When a UI
+check fails, first prove the input landed where you think it did, or you will
+debug the application for a defect in the harness.
 
 See also: [architecture review](architecture-review.md) ·
 [testing](testing.md)

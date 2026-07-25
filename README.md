@@ -14,7 +14,7 @@ not just by how many clues were removed.
 | [Puzzle generation and difficulty](docs/puzzle-generation.md) | How boards are generated, why difficulty is technique-graded, performance numbers |
 | [Solving techniques](docs/solving-techniques.md) | The human techniques the grader replays, with external references |
 | [Testing and CI](docs/testing.md) | The unit test suite, the PowerShell smoke test, and the pipeline |
-| [Lessons learned](docs/lessons-learned.md) | Bugs found along the way, their fixes, and what they taught |
+| [Lessons learned](docs/lessons-learned.md) | Every bug found along the way - how it was spotted, how the fix was verified, and what it taught |
 | [Tech stack](docs/tech-stack.md) | Frameworks, tools and the reasoning behind each choice |
 
 ## Features
@@ -33,7 +33,9 @@ not just by how many clues were removed.
   browser; auto-solve never sets records
 - **Mistake counter** - judged against the known solution; undo does not
   forgive a mistake
-- **Game persistence** - board, notes and the clock survive a page refresh
+- **Game persistence** - board, notes and the clock survive a page refresh,
+  saved in encrypted browser storage with no database and no account
+  ([how it works](docs/architecture.md#persistence-there-is-no-database))
 - **Real-time conflict highlighting**, Validate / Solve / Clear All
 
 ### Input and accessibility

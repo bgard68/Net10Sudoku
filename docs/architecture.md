@@ -55,6 +55,50 @@ Because `GameSession` and `SudokuService` depend only on ports, the entire
 game flow is unit-testable with in-memory fakes - no browser, no JS interop,
 no clock.
 
+## Persistence: there is no database
+
+Nothing is stored server-side and there are no accounts. The `IGameStore`
+port is satisfied by `GameStorage`, an adapter that lives in the web host
+(the only ring allowed to know about browsers) over Blazor's
+`ProtectedLocalStorage`. That is the browser's own `localStorage`, written
+through JS interop, with every value encrypted and signed by ASP.NET Core
+Data Protection before it leaves the server - what actually sits in the
+browser is opaque base64, not readable JSON.
+
+| Key | Holds |
+|---|---|
+| `sudoku.game` | The in-progress `GameSnapshot` |
+| `sudoku.best.{Difficulty}` | Best time in seconds, one key per level |
+
+A `GameSnapshot` is a flat, serializable image of the game: 81 cell values,
+81 given flags, 81 note bitmasks, the recorded solution, elapsed seconds,
+difficulty and the mistake count. It is deliberately an Application-layer
+model, so mapping to and from the domain `Board` is unit-testable with no
+browser in sight.
+
+Lifecycle:
+
+- Written after every placement, clear, undo, redo and solve, and on every
+  twentieth timer tick - so a refresh costs at most ~10 seconds of clock.
+- A solved game **deletes** its save; there is nothing to come back to.
+- On startup `GameSession.InitializeAsync` restores a saved game if one
+  parses, and otherwise generates a fresh Easy puzzle.
+- The adapter swallows storage failures and reports "no saved game".
+  Persistence is best-effort and must never break gameplay: a corrupt or
+  undecryptable entry costs a puzzle, not a crash.
+
+Scope follows the browser rather than the person. A save belongs to one
+browser and one origin, so `localhost:5260` and `localhost:7086` keep
+independent games and a private window starts clean. Data Protection keys
+are persisted under the user profile, so restarting the app does not
+invalidate an existing save.
+
+This is the clearest payoff of the port. `GameStorage` is the only type that
+knows any of the above; `GameSession` sees `IGameStore` and nothing else, so
+the flow tests substitute an in-memory fake and run in milliseconds
+([testing](testing.md)). Moving to a server-side store later is one new
+adapter and one changed DI registration - no core code moves.
+
 ## Flow of a user action
 
 ```mermaid
