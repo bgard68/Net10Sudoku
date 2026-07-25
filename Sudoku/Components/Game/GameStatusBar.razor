@@ -1,21 +1,14 @@
-<div class="status">
+<div class="stats">
     <span class="timer" role="timer" aria-label="Elapsed time">@TimeDisplay</span>
     @if (BestDisplay is not null)
     {
-        <span class="best" title="Fastest solve at this difficulty">Best: @BestDisplay</span>
+        <span class="best" title="Fastest solve at this difficulty">Best @BestDisplay</span>
     }
     <span class="mistakes @(Mistakes > 0 ? "has-mistakes" : "")">Mistakes: @Mistakes</span>
-    <span>Selected: @SelectedText</span>
-    @if (NotesMode)
-    {
-        <span class="notes-flag">Notes mode</span>
-    }
 </div>
 
 @code {
     [Parameter, EditorRequired] public string TimeDisplay { get; set; } = "";
     [Parameter] public string? BestDisplay { get; set; }
     [Parameter] public int Mistakes { get; set; }
-    [Parameter, EditorRequired] public string SelectedText { get; set; } = "";
-    [Parameter] public bool NotesMode { get; set; }
 }

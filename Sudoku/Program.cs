@@ -15,9 +15,7 @@ builder.Services.AddRazorComponents()
 // Sudoku DI registrations (Clean Architecture style)
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure();
-// Scoped, not singleton: in Blazor Server a singleton is shared by every circuit,
-// so one visitor toggling dark mode would change the theme for all of them.
-builder.Services.AddScoped<ThemeService>();
+// Scoped = per Blazor circuit, so each connected player gets their own storage.
 builder.Services.AddScoped<GameStorage>();
 // Same instance behind the application's persistence port.
 builder.Services.AddScoped<Sudoku.Application.Interfaces.IGameStore>(sp => sp.GetRequiredService<GameStorage>());

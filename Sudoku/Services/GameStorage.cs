@@ -4,14 +4,12 @@ using Sudoku.Application.Models;
 
 namespace Sudoku.Services;
 
-// Adapter for the IGameStore port over protected browser storage, plus the
-// theme preference (a purely UI concern, so not part of the port). Storage
+// Adapter for the IGameStore port over protected browser storage. Storage
 // failures are swallowed: persistence is best-effort and must never break
 // gameplay.
 public sealed class GameStorage : IGameStore
 {
     private const string GameKey = "sudoku.game";
-    private const string ThemeKey = "sudoku.darkmode";
 
     private readonly ProtectedLocalStorage _storage;
 
@@ -62,23 +60,4 @@ public sealed class GameStorage : IGameStore
     }
 
     private static string BestKey(Difficulty difficulty) => $"sudoku.best.{difficulty}";
-
-    public async Task<bool?> LoadDarkModeAsync()
-    {
-        try
-        {
-            var result = await _storage.GetAsync<bool>(ThemeKey);
-            return result.Success ? result.Value : null;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    public async Task SaveDarkModeAsync(bool darkMode)
-    {
-        try { await _storage.SetAsync(ThemeKey, darkMode); }
-        catch { /* best effort */ }
-    }
 }

@@ -46,7 +46,7 @@ no, the change is ceremony - it alters a checklist, not the software.
 
 | Candidate change | Why it was rejected |
 |---|---|
-| **An interface for `ThemeService`** | It is a bool with an event, consumed only by layout components in the same project. No test wants to fake it, no boundary crosses it, no second implementation is conceivable. If component tests for the layout ever exist, extract it in the five minutes it takes then. |
+| **An interface for `ThemeService`** | It was a bool with an event, consumed only by layout components in the same project. No test wanted to fake it, no boundary crossed it, no second implementation was conceivable. The theme system was later removed entirely in favour of a single dark theme - which retired the question, and vindicated not having spent the abstraction on it. |
 | **Moving per-layer DI registration (`AddApplication()` / `AddInfrastructure()`) into the host** | Satisfies a strict reading of doctrine at the cost of scattering each layer's registration knowledge away from the layer that owns it. Zero change to behavior, testability or coupling in practice; the current pattern is a deliberate, widely used convention. |
 | **Splitting `IGameService` into role interfaces** | Interface segregation protects consumers from members they do not use; this interface has one consumer that uses nearly all of it. Splitting would add files, not safety. |
 

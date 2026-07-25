@@ -1,29 +1,22 @@
-<div class="numpad">
+@* A 3x3 keypad of the digits 1-9. A digit correctly placed nine times turns
+   into a quiet check tile instead of a disabled button. *@
+<div class="keypad">
     @for (int n = 1; n <= 9; n++)
     {
         var num = n; // Local copy
         if (DigitDone[num])
         {
-            <button class="btn num complete" disabled title="Completed">&#10003;</button>
+            <button class="keytile complete" disabled title="Completed">&#10003;</button>
         }
         else
         {
-            <button class="btn num" disabled="@Disabled" @onclick="(() => OnPlace.InvokeAsync(num))" title="Place @num">@num</button>
+            <button class="keytile" disabled="@Disabled" @onclick="(() => OnPlace.InvokeAsync(num))" title="Place @num">@num</button>
         }
     }
-    <button class="btn notes-toggle @(NotesMode ? "active" : "")"
-            disabled="@Disabled"
-            @onclick="OnToggleNotes"
-            title="Toggle notes mode (N)"
-            aria-pressed="@(NotesMode ? "true" : "false")">Notes</button>
-    <button class="btn clear" disabled="@Disabled" @onclick="OnClear">Clear</button>
 </div>
 
 @code {
     [Parameter, EditorRequired] public bool[] DigitDone { get; set; } = default!;
-    [Parameter] public bool NotesMode { get; set; }
     [Parameter] public bool Disabled { get; set; }
     [Parameter] public EventCallback<int> OnPlace { get; set; }
-    [Parameter] public EventCallback OnToggleNotes { get; set; }
-    [Parameter] public EventCallback OnClear { get; set; }
 }

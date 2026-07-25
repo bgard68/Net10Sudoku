@@ -1,85 +1,169 @@
 .sudoku-root{display:flex;flex-direction:column;gap:12px;align-items:flex-start;padding:20px;position:relative}
-.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.toolbar .spacer{width:24px}
-.sudoku-root ::deep .btn{padding:8px 14px;border-radius:8px;border:none;cursor:pointer;font-weight:500;font-size:14px;transition:all .2s ease;box-shadow:0 2px 4px rgba(0,0,0,.1)}
-.sudoku-root ::deep .btn:hover{transform:translateY(-1px);box-shadow:0 4px 8px rgba(0,0,0,.15)}
-.sudoku-root ::deep .btn:active{transform:translateY(0);box-shadow:0 1px 2px rgba(0,0,0,.1)}
-.btn.diff.easy{background:linear-gradient(135deg, #a8e6cf 0%, #7bc993 100%);color:#2d5f3f}
-.btn.diff.med{background:linear-gradient(135deg, #ffd89b 0%, #ffb366 100%);color:#8b5a00}
-.btn.diff.hard{background:linear-gradient(135deg, #ff9a9e 0%, #ff6b81 100%);color:#8b1a2b}
-.btn.action{color:#fff;padding:8px 16px}
-.btn.action.validate{background:linear-gradient(135deg, #667eea 0%, #764ba2 100%)}
-.btn.action.validate:hover{background:linear-gradient(135deg, #5568d3 0%, #63408a 100%)}
-.btn.action.hint{background:linear-gradient(135deg, #f093fb 0%, #f5576c 100%)}
-.btn.action.hint:hover{background:linear-gradient(135deg, #de7ce8 0%, #dc4458 100%)}
-.btn.action.solve{background:linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)}
-.btn.action.solve:hover{background:linear-gradient(135deg, #3d92e5 0%, #00d9e5 100%)}
-.btn.action.clear-all{background:linear-gradient(135deg, #fa709a 0%, #fee140 100%)}
-.btn.action.clear-all:hover{background:linear-gradient(135deg, #e15e87 0%, #e5ca28 100%)}
 
-.board-wrapper{position:relative;display:inline-block}
-.board{display:inline-block;background:#fff;user-select:none;transition:all .3s ease}
+/* Header strip: difficulty pills left, stats right, spanning the play area */
+.top-strip{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;width:100%;max-width:672px}
+
+/* Board on the left, control panel on the right; the panel wraps below the
+   board on narrow screens */
+.play-area{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.side-panel{display:flex;flex-direction:column;gap:10px;width:176px}
+.pill-row{display:flex;flex-wrap:wrap;gap:6px}
+
+/* Pills: small, flat, crisp - solid fill when active, outline otherwise */
+.pill{
+    font-size:12px;font-weight:600;line-height:1.2;
+    padding:5px 12px;border-radius:999px;
+    background:transparent;border:1px solid transparent;
+    cursor:pointer;transition:background .15s ease,color .15s ease,border-color .15s ease;
+}
+.pill:disabled{cursor:default}
+.pill.easy{color:#4ade80;border-color:#166534}
+.pill.easy:hover:not(:disabled):not(.active){background:rgba(22,163,74,0.15)}
+.pill.easy.active{background:#16a34a;border-color:#16a34a;color:#fff}
+.pill.med{color:#fbbf24;border-color:#92400e}
+.pill.med:hover:not(:disabled):not(.active){background:rgba(217,119,6,0.15)}
+.pill.med.active{background:#d97706;border-color:#d97706;color:#fff}
+.pill.hard{color:#f87171;border-color:#991b1b}
+.pill.hard:hover:not(:disabled):not(.active){background:rgba(220,38,38,0.15)}
+.pill.hard.active{background:#dc2626;border-color:#dc2626;color:#fff}
+.pill.pro{color:#a78bfa;border-color:#5b21b6}
+.pill.pro:hover:not(:disabled):not(.active){background:rgba(124,58,237,0.15)}
+.pill.pro.active{background:#7c3aed;border-color:#a78bfa;color:#fff}
+.pill.neutral{color:#cbd5e1;border-color:#475569}
+.pill.neutral:hover:not(:disabled){background:rgba(203,213,225,0.1)}
+.pill.neutral:disabled{color:#475569;border-color:#1e293b}
+.pill.notes{color:#fbbf24;border-color:#92400e}
+.pill.notes:hover:not(:disabled):not(.active){background:rgba(217,119,6,0.15)}
+.pill.notes.active{background:#d97706;border-color:#fbbf24;color:#fff}
+.pill.hint{color:#f472b6;border-color:#9d174d}
+.pill.hint:hover:not(:disabled){background:rgba(190,24,93,0.15)}
+.pill.hint:disabled{color:#475569;border-color:#1e293b}
+
+/* Demoted actions: quiet text links below the keypad */
+.link-row{display:flex;gap:12px;justify-content:center}
+.linkbtn{
+    background:none;border:none;padding:2px 4px;cursor:pointer;
+    font-size:12px;color:#64748b;text-decoration:underline;
+}
+.linkbtn:hover:not(:disabled){color:#cbd5e1}
+.linkbtn:disabled{color:#334155;cursor:default}
+
+/* The board: black canvas, neon 3x3 separators */
+.board{display:inline-block;position:relative;overflow:hidden;user-select:none;background:#000000;border:2px solid #ffffff;transition:all .3s ease}
 .board.celebration{animation:board-flash 0.5s ease-in-out 3, board-rainbow 2s ease-in-out infinite 1.5s;box-shadow:0 0 30px rgba(255,215,0,.8),0 0 60px rgba(255,0,255,.6),0 0 90px rgba(0,255,255,.4)}
+.board:focus-visible{outline:3px solid #4b9cff;outline-offset:3px}
 
 .srow{display:flex}
-.cell{width:52px;height:52px;border:1px solid #d0d0d0;display:flex;align-items:center;justify-content:center;font-size:22px;outline:none;transition:box-shadow .2s ease, background .2s ease;cursor:pointer}
-.cell.left3{border-left:4px solid #000}
-.cell.top3{border-top:4px solid #000}
-.cell.right3{border-right:4px solid #000}
-.cell.bottom3{border-bottom:4px solid #000}
-.cell.given{background:#fafafa;font-weight:bold}
-.cell.selected{animation:selpulse 1.2s ease-in-out infinite;box-shadow:inset 0 0 0 2px #4b9cff;background:#fff4da;/* soft warm fluorescent */}
-.cell.rowhl:not(.selected):not(.conflict){background:rgba(200,200,220,0.45);box-shadow:none;} 
-.cell.colhl:not(.selected):not(.conflict){background:rgba(200,200,220,0.45);box-shadow:none;} 
-.cell.conflict{animation:conflictpulse 1.5s ease-in-out infinite;background:#ffe0e0;color:#c92a2a;font-weight:bold}
+.cell{
+    width:52px;height:52px;display:flex;align-items:center;justify-content:center;
+    font-size:22px;outline:none;cursor:pointer;
+    border:1px solid #3a3a3a;background:#1a1a1a;color:#ffffff;
+    transition:box-shadow .2s ease, background .2s ease;
+}
+.cell span{color:#ffffff}
+.cell.given{font-weight:bold}
+.cell.left3{border-left:4px solid #39ff14;box-shadow:-3px 0 6px -1px rgba(57,255,20,0.5)}
+.cell.top3{border-top:4px solid #39ff14;box-shadow:0 -3px 6px -1px rgba(57,255,20,0.5)}
+.cell.right3{border-right:4px solid #39ff14;box-shadow:3px 0 6px -1px rgba(57,255,20,0.5)}
+.cell.bottom3{border-bottom:4px solid #39ff14;box-shadow:0 3px 6px -1px rgba(57,255,20,0.5)}
+.cell.left3.top3{box-shadow:-3px 0 8px -1px rgba(57,255,20,0.6), 0 -3px 8px -1px rgba(57,255,20,0.6)}
+.cell.right3.top3{box-shadow:3px 0 8px -1px rgba(57,255,20,0.6), 0 -3px 8px -1px rgba(57,255,20,0.6)}
+.cell.left3.bottom3{box-shadow:-3px 0 8px -1px rgba(57,255,20,0.6), 0 3px 8px -1px rgba(57,255,20,0.6)}
+.cell.right3.bottom3{box-shadow:3px 0 8px -1px rgba(57,255,20,0.6), 0 3px 8px -1px rgba(57,255,20,0.6)}
 
+.cell.selected{animation:selpulse 1.2s ease-in-out infinite;background:#1a1a1a}
+@keyframes selpulse {
+    0% { box-shadow: inset 0 0 0 0 #4b9cff; }
+    50% { box-shadow: inset 0 0 0 3px #4b9cff; }
+    100% { box-shadow: inset 0 0 0 0 #4b9cff; }
+}
+
+.cell.rowhl:not(.selected):not(.conflict){background:rgba(70,70,90,0.6);color:#ffffff;box-shadow:none}
+.cell.colhl:not(.selected):not(.conflict){background:rgba(70,70,90,0.6);color:#ffffff;box-shadow:none}
+.cell.blockhl{background:transparent;box-shadow:none}
+
+.cell.conflict{animation:conflictpulse 1.5s ease-in-out infinite;background:#4a0000;color:#ff6b6b;font-weight:bold}
 @keyframes conflictpulse {
-    0% { background: #ffe0e0; box-shadow: inset 0 0 0 0 rgba(201, 42, 42, 0.3); }
-    50% { background: #ffcccc; box-shadow: inset 0 0 0 3px rgba(201, 42, 42, 0.5); }
-    100% { background: #ffe0e0; box-shadow: inset 0 0 0 0 rgba(201, 42, 42, 0.3); }
-}
-.celebration .cell{animation:cell-celebration 0.8s ease-in-out infinite}
-
-.sudoku-root ::deep .numpad{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-.sudoku-root ::deep .btn.num{width:40px;height:40px;padding:0;background:linear-gradient(135deg, #e0e7ff 0%, #cfd9fe 100%);color:#3730a3;font-weight:600;font-size:16px}
-.sudoku-root ::deep .btn.num:hover{background:linear-gradient(135deg, #c7d2fe 0%, #a5b4fc 100%)}
-.sudoku-root ::deep .btn.clear{background:linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);color:#7f1d1d;font-weight:600}
-.sudoku-root ::deep .btn.clear:hover{background:linear-gradient(135deg, #fca5a5 0%, #f87171 100%)}
-.message{min-height:1.2em;font-size:14px;color:#4b5563;font-weight:500}
-.sudoku-root ::deep .status{font-size:12px;color:#6b7280;font-style:italic}
-
-/* Adjusted block overlay sizing and visibility */
-.board{position:relative; overflow:hidden;}
-.block-overlay{
-  position:absolute;
-  width:158px; /* 52*3 + 2px internal borders */
-  height:158px;
-  background:rgba(200,200,220,0.42);
-  box-shadow:0 0 0 3px rgba(120,120,150,0.65), 0 0 14px rgba(120,120,150,0.55);
-  pointer-events:none;
-  border-radius:4px;
-}
-.sudoku-root.dark-mode .block-overlay{
-  background:rgba(70,70,90,0.55);
-  box-shadow:0 0 0 3px rgba(160,160,190,0.6), 0 0 20px rgba(160,160,200,0.55);
+    0% { background: #4a0000; box-shadow: inset 0 0 0 0 rgba(255, 107, 107, 0.3); }
+    50% { background: #660000; box-shadow: inset 0 0 0 3px rgba(255, 107, 107, 0.5); }
+    100% { background: #4a0000; box-shadow: inset 0 0 0 0 rgba(255, 107, 107, 0.3); }
 }
 
-/* Enhanced matching value highlight */
+/* Matching value highlight */
 .cell.valhl{
-  background:linear-gradient(135deg, #fffda8 0%, #b8ffec 100%) !important;
-  box-shadow:0 0 8px rgba(255,255,180,0.8), 0 0 14px rgba(184,255,236,0.6), inset 0 0 0 2px rgba(255,255,255,0.7);
-  color:#002230;
-  text-shadow:0 0 4px rgba(255,255,255,0.6);
-  filter:saturate(1.2) brightness(1.05);
-}
-.sudoku-root.dark-mode .cell.valhl{
-  background:linear-gradient(135deg, rgba(255,255,140,0.28) 0%, rgba(140,255,235,0.28) 100%) !important;
-  box-shadow:0 0 10px rgba(255,255,140,0.55), 0 0 18px rgba(140,255,235,0.5), inset 0 0 0 2px rgba(255,255,255,0.18);
-  color:#ffffff;
-  text-shadow:0 0 6px rgba(255,255,255,0.7);
-  filter:saturate(1.25) brightness(1.2);
+    background:linear-gradient(135deg, rgba(255,255,140,0.28) 0%, rgba(140,255,235,0.28) 100%) !important;
+    box-shadow:0 0 10px rgba(255,255,140,0.55), 0 0 18px rgba(140,255,235,0.5), inset 0 0 0 2px rgba(255,255,255,0.18);
+    color:#ffffff;
+    text-shadow:0 0 6px rgba(255,255,255,0.7);
+    filter:saturate(1.25) brightness(1.2);
 }
 
+/* Selected 3x3 block overlay */
+.block-overlay{
+    position:absolute;
+    width:158px; /* 52*3 + 2px internal borders */
+    height:158px;
+    background:rgba(70,70,90,0.55);
+    box-shadow:0 0 0 3px rgba(160,160,190,0.6), 0 0 20px rgba(160,160,200,0.55);
+    pointer-events:none;
+    border-radius:4px;
+}
+
+/* Pencil marks: a 3x3 mini-grid of candidate digits inside an empty cell */
+.notes{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    grid-template-rows:repeat(3, 1fr);
+    width:100%;
+    height:100%;
+    pointer-events:none;
+}
+.note{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:11px;
+    line-height:1;
+    color:#94a3b8;
+    font-weight:600;
+}
+
+/* The 3x3 keypad: flat crisp tiles, larger than the pills, smaller than cells */
+.sudoku-root ::deep .keypad{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:48px;gap:6px}
+.sudoku-root ::deep .keytile{
+    display:flex;align-items:center;justify-content:center;
+    background:#1e293b;color:#ffffff;border:1px solid #475569;border-radius:8px;
+    font-size:18px;font-weight:700;cursor:pointer;
+    transition:background .15s ease,border-color .15s ease;
+}
+.sudoku-root ::deep .keytile:hover:not(:disabled){background:#334155;border-color:#64748b}
+.sudoku-root ::deep .keytile:disabled:not(.complete){color:#475569;cursor:default}
+.sudoku-root ::deep .keytile.complete{background:#14532d;color:#4ade80;border-color:#166534;cursor:default}
+
+/* Stats strip: timer, best time and mistakes at the top right */
+.sudoku-root ::deep .stats{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:13px;color:#94a3b8;font-variant-numeric:tabular-nums}
+.sudoku-root ::deep .stats .timer{font-weight:700;font-size:15px;color:#e5e7eb}
+.sudoku-root ::deep .stats .best{font-weight:600;color:#34d399}
+.sudoku-root ::deep .stats .mistakes.has-mistakes{color:#f87171;font-weight:600}
+
+.message{min-height:1.2em;font-size:14px;color:#d1d5db;font-weight:500}
+
+/* Win banner: time, record status and mistakes */
+.sudoku-root ::deep .win-stats{
+    display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+    font-size:16px;font-weight:700;color:#a7f3d0;
+    background:linear-gradient(135deg, rgba(6,95,70,0.6) 0%, rgba(4,120,87,0.6) 100%);
+    border-radius:10px;padding:10px 16px;
+    box-shadow:0 0 12px rgba(52,211,153,0.5);
+}
+.sudoku-root ::deep .win-stats .new-best{
+    color:#92400e;
+    background:linear-gradient(135deg, #fde68a 0%, #fbbf24 100%);
+    border-radius:6px;padding:2px 8px;
+    animation:selpulse 1.2s ease-in-out infinite;
+}
+
+/* Scrolling congratulations overlay */
 .sudoku-root ::deep .scrolling-text-container{
     position:absolute;
     top:-10px;
@@ -89,7 +173,6 @@
     pointer-events:none;
     overflow:hidden;
 }
-
 .sudoku-root ::deep .scrolling-text{
     position:absolute;
     font-size:28px;
@@ -122,12 +205,11 @@
     100%{top:-40px;left:0%;transform:translateX(0) rotate(360deg)}
 }
 
-/* Celebration Animations */
+/* Celebration animations */
 @keyframes board-flash{
-    0%,100%{transform:scale(1);filter:brightness(1)}
-    50%{transform:scale(1.02);filter:brightness(1.3) hue-rotate(0deg)}
+    0%, 100% { transform: scale(1); filter: brightness(1); }
+    50% { transform: scale(1.02); filter: brightness(1.5) hue-rotate(0deg); }
 }
-
 @keyframes board-rainbow{
     0%{filter:hue-rotate(0deg) brightness(1.1)}
     25%{filter:hue-rotate(90deg) brightness(1.2)}
@@ -135,21 +217,17 @@
     75%{filter:hue-rotate(270deg) brightness(1.2)}
     100%{filter:hue-rotate(360deg) brightness(1.1)}
 }
-
+.celebration .cell{animation:cell-celebration 0.8s ease-in-out infinite}
 @keyframes cell-celebration{
-    0%,100%{background:#fff;transform:scale(1)}
-    25%{background:#ffe0ff;transform:scale(1.05)}
-    50%{background:#e0ffff;transform:scale(1)}
-    75%{background:#ffffe0;transform:scale(1.05)}
+    0%,100%{background:#000000;transform:scale(1)}
+    25%{background:#1a001a;transform:scale(1.05)}
+    50%{background:#001a1a;transform:scale(1)}
+    75%{background:#1a1a00;transform:scale(1.05)}
 }
 
-/* Professional Starbursts Container */
+/* Starbursts */
 .sudoku-root ::deep .starbursts-container{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;overflow:hidden;perspective:1000px}
-
-/* Individual Starburst */
 .sudoku-root ::deep .starburst{position:absolute;width:0;height:0;transform:translate(-50%,-50%);transform-style:preserve-3d}
-
-/* Professional Particle with Realistic Physics */
 .sudoku-root ::deep .particle{
     position:absolute;
     width:4px;
@@ -162,8 +240,6 @@
     filter:blur(0.3px);
     transform-origin:center bottom;
 }
-
-/* Realistic long trailing effect */
 .sudoku-root ::deep .particle::after{
     content:'';
     position:absolute;
@@ -229,259 +305,3 @@
 
 /* Remove solid circles from fanfare */
 .sudoku-root ::deep .starburst::before, .sudoku-root ::deep .starburst::after, .sudoku-root ::deep .particle::before { content:none !important; display:none !important; box-shadow:none !important; animation:none !important; }
-
-/* Professional Shockwave Ring */
-.sudoku-root ::deep .starburst::before{
-    content:'';
-    position:absolute;
-    top:50%;
-    left:50%;
-    width:70px;
-    height:70px;
-    border:5px solid rgba(255,255,255,0.95);
-    border-radius:50%;
-    transform:translate(-50%,-50%);
-    animation:shockwave-professional 2.5s cubic-bezier(0.22, 1, 0.36, 1) infinite;
-}
-
-@keyframes shockwave-professional{
-    0%{
-        transform:translate(-50%,-50%) scale(0);
-        opacity:0;
-        border-width:6px;
-        box-shadow:
-            0 0 15px rgba(255,255,255,0.9),
-            inset 0 0 15px rgba(255,255,255,0.6);
-    }
-    3%{
-        opacity:1;
-        border-width:5px;
-    }
-    15%{
-        transform:translate(-50%,-50%) scale(2);
-        opacity:0.95;
-        border-width:4px;
-    }
-    40%{
-        transform:translate(-50%,-50%) scale(5);
-        opacity:0.6;
-        border-width:2px;
-    }
-    100%{
-        transform:translate(-50%,-50%) scale(8);
-        opacity:0;
-        border-width:0.5px;
-        box-shadow:0 0 5px rgba(255,255,255,0.2);
-    }
-}
-
-/* Dark Mode Styles */
-.sudoku-root.dark-mode .board {
-    background: #000000;
-    border: 2px solid #ffffff;
-}
-
-/* Dim regular cell borders in dark mode */
-.sudoku-root.dark-mode .cell {
-    border: 1px solid #3a3a3a;
-    background: #1a1a1a;
-    color: #ffffff;
-}
-
-/* Neon distinctive 3x3 box borders */
-.sudoku-root.dark-mode .cell.left3 { border-left:4px solid #39ff14; box-shadow:-3px 0 6px -1px rgba(57,255,20,0.5); }
-.sudoku-root.dark-mode .cell.top3 { border-top:4px solid #39ff14; box-shadow:0 -3px 6px -1px rgba(57,255,20,0.5); }
-.sudoku-root.dark-mode .cell.right3 { border-right:4px solid #39ff14; box-shadow:3px 0 6px -1px rgba(57,255,20,0.5); }
-.sudoku-root.dark-mode .cell.bottom3 { border-bottom:4px solid #39ff14; box-shadow:0 3px 6px -1px rgba(57,255,20,0.5); }
-
-/* Boost glow at 3x3 box corners */
-.sudoku-root.dark-mode .cell.left3.top3 { box-shadow:-3px 0 8px -1px rgba(57,255,20,0.6), 0 -3px 8px -1px rgba(57,255,20,0.6); }
-.sudoku-root.dark-mode .cell.right3.top3 { box-shadow:3px 0 8px -1px rgba(57,255,20,0.6), 0 -3px 8px -1px rgba(57,255,20,0.6); }
-.sudoku-root.dark-mode .cell.left3.bottom3 { box-shadow:-3px 0 8px -1px rgba(57,255,20,0.6), 0 3px 8px -1px rgba(57,255,20,0.6); }
-.sudoku-root.dark-mode .cell.right3.bottom3 { box-shadow:3px 0 8px -1px rgba(57,255,20,0.6), 0 3px 8px -1px rgba(57,255,20,0.6); }
-
-/* Ensure all numbers in dark mode are white */
-.sudoku-root.dark-mode .cell span {
-    color: #ffffff;
-}
-
-.sudoku-root.dark-mode .cell.selected {
-    animation: selpulse-dark 1.2s ease-in-out infinite;
-    background: #1a1a1a;
-}
-
-@keyframes selpulse-dark {
-    0% { box-shadow: inset 0 0 0 0 #4b9cff; }
-    50% { box-shadow: inset 0 0 0 3px #4b9cff; }
-    100% { box-shadow: inset 0 0 0 0 #4b9cff; }
-}
-
-.sudoku-root.dark-mode .cell.rowhl:not(.selected):not(.conflict) {
-    background: rgba(70,70,90,0.6);
-    color: #ffffff;
-}
-
-.sudoku-root.dark-mode .cell.colhl:not(.selected):not(.conflict) {
-    background: rgba(70,70,90,0.6);
-    color: #ffffff;
-}
-
-.sudoku-root.dark-mode .cell.conflict {
-    animation: conflictpulse-dark 1.5s ease-in-out infinite;
-    background: #4a0000;
-    color: #ff6b6b;
-    font-weight: bold;
-}
-
-@keyframes conflictpulse-dark {
-    0% { background: #4a0000; box-shadow: inset 0 0 0 0 rgba(255, 107, 107, 0.3); }
-    50% { background: #660000; box-shadow: inset 0 0 0 3px rgba(255, 107, 107, 0.5); }
-    100% { background: #4a0000; box-shadow: inset 0 0 0 0 rgba(255, 107, 107, 0.3); }
-}
-
-.sudoku-root.dark-mode .message {
-    color: #d1d5db;
-}
-
-.sudoku-root.dark-mode .status {
-    color: #9ca3af;
-}
-
-/* Dark mode celebration */
-.sudoku-root.dark-mode .celebration .cell {
-    animation: cell-celebration-dark 0.8s ease-in-out infinite;
-}
-
-@keyframes cell-celebration-dark {
-    0%,100%{background:#000000;transform:scale(1)}
-    25%{background:#1a001a;transform:scale(1.05)}
-    50%{background:#001a1a;transform:scale(1)}
-    75%{background:#1a1a00;transform:scale(1.05)}
-}
-
-.sudoku-root.dark-mode .board.celebration {
-    animation: board-flash-dark 0.5s ease-in-out 3, board-rainbow 2s ease-in-out infinite 1.5s;
-    box-shadow: 0 0 30px rgba(255, 215, 0, 0.8), 0 0 60px rgba(255, 0, 255, 0.6), 0 0 90px rgba(0, 255, 255, 0.4);
-}
-
-@keyframes board-flash-dark {
-    0%, 100% { transform: scale(1); filter: brightness(1); }
-    50% { transform: scale(1.02); filter: brightness(1.5) hue-rotate(0deg); }
-}
-
-.sudoku-root.dark-mode ::deep .scrolling-text {
-    color: #39ff14;
-    text-shadow:
-        0 0 5px #39ff14,
-        0 0 10px #39ff14,
-        0 0 20px #39ff14,
-        0 0 30px #39ff14,
-        0 0 40px #00ff00,
-        0 0 50px #00ff00,
-        0 0 60px #00ff00,
-        0 0 70px #00ff00,
-        0 0 80px #00ff00;
-    filter:contrast(1.5) brightness(1.3);
-}
-
-/* Disable old per-cell block highlight visual */
-.cell.blockhl{background:transparent; box-shadow:none;}
-.sudoku-root.dark-mode .cell.blockhl{background:transparent; box-shadow:none;}
-
-/* Row / Column stronger highlight */
-.cell.rowhl:not(.selected):not(.conflict){background:rgba(200,200,220,0.45);} 
-.cell.colhl:not(.selected):not(.conflict){background:rgba(200,200,220,0.45);} 
-.sudoku-root.dark-mode .cell.rowhl:not(.selected):not(.conflict){background:rgba(70,70,90,0.6);} 
-.sudoku-root.dark-mode .cell.colhl:not(.selected):not(.conflict){background:rgba(70,70,90,0.6);} 
-
-/* 3x3 overlay */
-.board{position:relative;}
-.block-overlay{
-  position:absolute;
-  width:158px; /* 52*3 + 2px internal borders */
-  height:158px;
-  background:rgba(200,200,220,0.42);
-  box-shadow:0 0 0 3px rgba(120,120,150,0.65), 0 0 14px rgba(120,120,150,0.55);
-  pointer-events:none;
-  border-radius:4px;
-}
-.sudoku-root.dark-mode .block-overlay{
-  background:rgba(70,70,90,0.55);
-  box-shadow:0 0 0 3px rgba(160,160,190,0.6), 0 0 20px rgba(160,160,200,0.55);
-}
-
-/* Completed number button state */
-.sudoku-root ::deep .btn.num.complete{
-    background:linear-gradient(135deg, #b7ffc3 0%, #69f0ae 100%);
-    color:#0b3d2e;
-    cursor:default;
-    box-shadow:0 0 10px rgba(105,240,174,0.7), 0 0 20px rgba(105,240,174,0.5);
-}
-.sudoku-root ::deep .btn.num.complete:disabled{ opacity:0.95; }
-
-/* Professional difficulty button */
-.btn.diff.pro{background:linear-gradient(135deg, #c084fc 0%, #7c3aed 100%);color:#f5f3ff}
-
-/* Undo / redo */
-.btn.action.undo,.btn.action.redo{background:linear-gradient(135deg, #94a3b8 0%, #64748b 100%)}
-.btn.action.undo:hover,.btn.action.redo:hover{background:linear-gradient(135deg, #7d8ea3 0%, #526075 100%)}
-.sudoku-root ::deep .btn:disabled{opacity:0.45;cursor:default;transform:none;box-shadow:0 2px 4px rgba(0,0,0,.1)}
-
-/* Notes mode toggle */
-.sudoku-root ::deep .btn.notes-toggle{background:linear-gradient(135deg, #fef3c7 0%, #fcd34d 100%);color:#78350f;font-weight:600}
-.sudoku-root ::deep .btn.notes-toggle:hover{background:linear-gradient(135deg, #fde68a 0%, #fbbf24 100%)}
-.sudoku-root ::deep .btn.notes-toggle.active{background:linear-gradient(135deg, #f59e0b 0%, #d97706 100%);color:#fffbeb;box-shadow:0 0 10px rgba(245,158,11,0.7)}
-
-/* Pencil marks: a 3x3 mini-grid of candidate digits inside an empty cell */
-.notes{
-    display:grid;
-    grid-template-columns:repeat(3, 1fr);
-    grid-template-rows:repeat(3, 1fr);
-    width:100%;
-    height:100%;
-    pointer-events:none;
-}
-.note{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:11px;
-    line-height:1;
-    color:#64748b;
-    font-weight:600;
-}
-.sudoku-root.dark-mode .note{color:#94a3b8}
-
-/* Keyboard focus on the grid (single tab stop, arrows move the active cell) */
-.board:focus-visible{outline:3px solid #4b9cff;outline-offset:3px}
-
-/* Status line: timer, best time, mistakes and notes-mode flag */
-.sudoku-root ::deep .status{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
-.sudoku-root ::deep .status .timer{font-style:normal;font-weight:700;font-variant-numeric:tabular-nums;color:#374151}
-.sudoku-root.dark-mode ::deep .status .timer{color:#e5e7eb}
-.sudoku-root ::deep .status .best{font-style:normal;font-weight:600;font-variant-numeric:tabular-nums;color:#047857}
-.sudoku-root.dark-mode ::deep .status .best{color:#34d399}
-.sudoku-root ::deep .status .mistakes{font-style:normal;font-variant-numeric:tabular-nums}
-.sudoku-root ::deep .status .mistakes.has-mistakes{color:#b91c1c;font-weight:600}
-.sudoku-root.dark-mode ::deep .status .mistakes.has-mistakes{color:#f87171}
-.sudoku-root ::deep .status .notes-flag{color:#b45309;font-weight:600;font-style:normal}
-.sudoku-root.dark-mode ::deep .status .notes-flag{color:#fbbf24}
-
-/* Win banner: time, record status and mistakes */
-.sudoku-root ::deep .win-stats{
-    display:flex;gap:10px;align-items:center;flex-wrap:wrap;
-    font-size:16px;font-weight:700;color:#065f46;
-    background:linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-    border-radius:10px;padding:10px 16px;
-    box-shadow:0 0 12px rgba(52,211,153,0.5);
-}
-.sudoku-root ::deep .win-stats .new-best{
-    color:#92400e;
-    background:linear-gradient(135deg, #fde68a 0%, #fbbf24 100%);
-    border-radius:6px;padding:2px 8px;
-    animation:selpulse 1.2s ease-in-out infinite;
-}
-.sudoku-root.dark-mode ::deep .win-stats{
-    color:#a7f3d0;
-    background:linear-gradient(135deg, rgba(6,95,70,0.6) 0%, rgba(4,120,87,0.6) 100%);
-}

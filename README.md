@@ -33,7 +33,7 @@ not just by how many clues were removed.
   browser; auto-solve never sets records
 - **Mistake counter** - judged against the known solution; undo does not
   forgive a mistake
-- **Game persistence** - board, notes, clock and theme survive a page refresh
+- **Game persistence** - board, notes and the clock survive a page refresh
 - **Real-time conflict highlighting**, Validate / Solve / Clear All
 
 ### Input and accessibility
@@ -41,7 +41,6 @@ not just by how many clues were removed.
   place values or notes, Backspace/Delete clears, N toggles Notes mode
 - **Screen-reader support** - `grid`/`row`/`gridcell` roles,
   `aria-activedescendant` tracking, descriptive per-cell labels
-- **Dark mode** - per-user, persisted
 
 ## Getting started
 

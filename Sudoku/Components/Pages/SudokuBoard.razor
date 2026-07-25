@@ -3,10 +3,8 @@
 @using Sudoku.Application.Models
 @using Sudoku.Application.Services
 @using Sudoku.Domain
-@using Sudoku.Services
 @inject IGameService Sudoku
 @inject GameSession Session
-@inject ThemeService ThemeService
 @implements IDisposable
 
 <PageTitle>Sudoku Game</PageTitle>
@@ -17,21 +15,22 @@
     var view = BuildView();
 }
 
-<div class="sudoku-root @(ThemeService.IsDarkMode ? "dark-mode" : "")" @onmouseup="OnMouseUp">
-    <div class="toolbar">
-        <button class="btn diff easy" disabled="@Session.IsGenerating" @onclick="(() => NewGame(Difficulty.Easy))">Easy</button>
-        <button class="btn diff med" disabled="@Session.IsGenerating" @onclick="(() => NewGame(Difficulty.Medium))">Medium</button>
-        <button class="btn diff hard" disabled="@Session.IsGenerating" @onclick="(() => NewGame(Difficulty.Hard))">Hard</button>
-        <button class="btn diff pro" disabled="@Session.IsGenerating" @onclick="(() => NewGame(Difficulty.Professional))">Professional</button>
-        <span class="spacer"></span>
-        <button class="btn action undo" disabled="@(Session.IsGenerating || !Sudoku.CanUndo)" @onclick="Undo" title="Undo last action">Undo</button>
-        <button class="btn action redo" disabled="@(Session.IsGenerating || !Sudoku.CanRedo)" @onclick="Redo" title="Redo undone action">Redo</button>
-        <button class="btn action validate" disabled="@Session.IsGenerating" @onclick="Validate">Validate</button>
-        <button class="btn action hint" disabled="@Session.IsGenerating" @onclick="ApplyHint">Hint</button>
-        <button class="btn action solve" disabled="@Session.IsGenerating" @onclick="Solve">Solve</button>
-        <button class="btn action clear-all" disabled="@Session.IsGenerating" @onclick="ClearAll">Clear All</button>
+<div class="sudoku-root" @onmouseup="OnMouseUp">
+    <div class="top-strip">
+        @* The filled pill doubles as the current-difficulty indicator; clicking
+           any pill starts a new game at that level. *@
+        <div class="pill-row" role="group" aria-label="New game difficulty">
+            <button class="pill easy @(ActivePill(Difficulty.Easy))" disabled="@Session.IsGenerating" @onclick="(() => NewGame(Difficulty.Easy))" title="New Easy game">Easy</button>
+            <button class="pill med @(ActivePill(Difficulty.Medium))" disabled="@Session.IsGenerating" @onclick="(() => NewGame(Difficulty.Medium))" title="New Medium game">Medium</button>
+            <button class="pill hard @(ActivePill(Difficulty.Hard))" disabled="@Session.IsGenerating" @onclick="(() => NewGame(Difficulty.Hard))" title="New Hard game">Hard</button>
+            <button class="pill pro @(ActivePill(Difficulty.Professional))" disabled="@Session.IsGenerating" @onclick="(() => NewGame(Difficulty.Professional))" title="New Professional game">Pro</button>
+        </div>
+        <GameStatusBar TimeDisplay="@TimeDisplay"
+                       BestDisplay="@BestDisplay"
+                       Mistakes="Sudoku.Mistakes" />
     </div>
 
+    <div class="play-area">
     @* One tab stop for the whole grid; arrows move the active cell and
        aria-activedescendant tells assistive tech which cell that is. *@
     <div class="board @(Session.IsSolved ? "celebration" : "")"
@@ -86,18 +85,30 @@
         }
     </div>
 
-    <NumberPad DigitDone="view.DigitDone"
-               NotesMode="Sudoku.NotesMode"
-               Disabled="Session.IsGenerating"
-               OnPlace="Place"
-               OnToggleNotes="ToggleNotes"
-               OnClear="Clear" />
+    <div class="side-panel">
+        <div class="pill-row" role="toolbar" aria-label="Game actions">
+            <button class="pill neutral" disabled="@(Session.IsGenerating || !Sudoku.CanUndo)" @onclick="Undo" title="Undo last action">Undo</button>
+            <button class="pill neutral" disabled="@(Session.IsGenerating || !Sudoku.CanRedo)" @onclick="Redo" title="Redo undone action">Redo</button>
+            <button class="pill neutral" disabled="@Session.IsGenerating" @onclick="Clear" title="Erase the selected cell">Erase</button>
+            <button class="pill notes @(Sudoku.NotesMode ? "active" : "")"
+                    disabled="@Session.IsGenerating"
+                    @onclick="ToggleNotes"
+                    title="Toggle notes mode (N)"
+                    aria-pressed="@(Sudoku.NotesMode ? "true" : "false")">Notes</button>
+            <button class="pill hint" disabled="@Session.IsGenerating" @onclick="ApplyHint" title="Reveal the selected cell">Hint</button>
+        </div>
 
-    <GameStatusBar TimeDisplay="@TimeDisplay"
-                   BestDisplay="@BestDisplay"
-                   Mistakes="Sudoku.Mistakes"
-                   SelectedText="@SelectedText"
-                   NotesMode="Sudoku.NotesMode" />
+        <NumberPad DigitDone="view.DigitDone"
+                   Disabled="Session.IsGenerating"
+                   OnPlace="Place" />
+
+        <div class="link-row">
+            <button class="linkbtn" disabled="@Session.IsGenerating" @onclick="Validate">Validate</button>
+            <button class="linkbtn" disabled="@Session.IsGenerating" @onclick="Solve">Solve</button>
+            <button class="linkbtn" disabled="@Session.IsGenerating" @onclick="ClearAll">Clear all</button>
+        </div>
+    </div>
+    </div>
 
     @if (Session.IsSolved)
     {
@@ -123,15 +134,13 @@
 
     private string TimeDisplay => Format(Session.Elapsed);
     private string? BestDisplay => Session.BestTime is TimeSpan best ? Format(best) : null;
-    private string SelectedText => Sudoku.Selected is Position sp ? $"({sp.Row + 1},{sp.Col + 1})" : "none";
+    private string ActivePill(Difficulty d) => Session.CurrentDifficulty == d ? "active" : "";
     private static string Format(TimeSpan t) => $"{(int)t.TotalMinutes:00}:{t.Seconds:00}";
     private string? ActiveDescendant => Sudoku.Selected is Position p ? CellId(p.Row, p.Col) : null;
     private static string CellId(int r, int c) => $"cell-{r}-{c}";
 
     protected override void OnInitialized()
     {
-        ThemeService.OnThemeChanged += OnThemeChanged;
-
         clock = new System.Timers.Timer(500);
         // The Elapsed callback fires on a timer thread; everything runs inside
         // InvokeAsync so state is only touched on the renderer's context.
@@ -152,14 +161,8 @@
         StateHasChanged();
     }
 
-    private void OnThemeChanged()
-    {
-        InvokeAsync(StateHasChanged);
-    }
-
     public void Dispose()
     {
-        ThemeService.OnThemeChanged -= OnThemeChanged;
         clock?.Dispose();
     }
 

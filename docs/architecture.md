@@ -102,9 +102,8 @@ Sudoku.slnx
 |-- Sudoku/                     Blazor Server host
 |   |-- Components/Pages/       SudokuBoard.razor (grid, toolbar, orchestration)
 |   |-- Components/Game/        NumberPad, GameStatusBar, WinBanner, Celebration
-|   |-- Components/Layout/      MainLayout, NavMenu (theme persistence)
-|   `-- Services/               GameStorage (IGameStore adapter + theme store),
-|                               ThemeService
+|   |-- Components/Layout/      MainLayout, NavMenu
+|   `-- Services/               GameStorage (IGameStore adapter)
 |-- Sudoku.Tests/               87 xUnit tests over the real service graph
 `-- tools/smoke-test.ps1        14-check HTTP smoke test (see docs/testing.md)
 ```
@@ -126,8 +125,8 @@ Sudoku.slnx
   are derived once per render from per-unit digit counts, not recomputed per
   cell.
 - **Scoped services per circuit.** In Blazor Server a singleton is shared by
-  every connected player; game state and theme are scoped so each visitor
-  gets their own.
+  every connected player; game state is scoped so each visitor gets their
+  own.
 
 See also: [architecture review](architecture-review.md) ·
 [tech stack](tech-stack.md) · [testing](testing.md)
