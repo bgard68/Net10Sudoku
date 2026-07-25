@@ -298,8 +298,14 @@
     private string? ActiveDescendant => Sudoku.Selected is Position p ? CellId(p.Row, p.Col) : null;
     private static string CellId(int r, int c) => $"cell-{r}-{c}";
 
-    protected override void OnInitialized()
+    // Everything here needs a live interactive circuit, so none of it runs during
+    // prerender: browser storage needs JS interop, and the game clock must not tick
+    // on a prerendered instance that is about to be torn down. Both start on the
+    // first interactive render.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!firstRender) return;
+
         clock = new System.Timers.Timer(500);
         // The Elapsed callback fires on a timer thread; everything runs inside
         // InvokeAsync so state is only touched on the renderer's context.
@@ -309,13 +315,7 @@
             StateHasChanged();
         });
         clock.Start();
-    }
 
-    // Browser storage needs JS interop, which is unavailable until after the first
-    // interactive render - so game start (restore or fresh puzzle) happens here.
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender) return;
         await Session.InitializeAsync();
         StateHasChanged();
     }
