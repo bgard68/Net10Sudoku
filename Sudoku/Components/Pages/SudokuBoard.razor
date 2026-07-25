@@ -208,14 +208,16 @@
         ThemeService.OnThemeChanged += OnThemeChanged;
 
         clock = new System.Timers.Timer(500);
-        clock.Elapsed += (_, _) =>
+        // The Elapsed callback fires on a timer thread; all component state is
+        // touched inside InvokeAsync so it stays on the renderer's context.
+        clock.Elapsed += (_, _) => _ = InvokeAsync(() =>
         {
             if (isSolved || isGenerating) return;
             elapsed = DateTime.UtcNow - startedUtc;
             // Persist the running clock every ~10s so a refresh loses at most that.
-            if (++clockTicks % 20 == 0) _ = InvokeAsync(PersistAsync);
-            _ = InvokeAsync(StateHasChanged);
-        };
+            if (++clockTicks % 20 == 0) _ = PersistAsync();
+            StateHasChanged();
+        });
         clock.Start();
     }
 
