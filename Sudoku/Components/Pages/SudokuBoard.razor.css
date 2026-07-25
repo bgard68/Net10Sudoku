@@ -418,3 +418,46 @@
     box-shadow:0 0 10px rgba(105,240,174,0.7), 0 0 20px rgba(105,240,174,0.5);
 }
 .btn.num.complete:disabled{ opacity:0.95; }
+
+/* Professional difficulty button */
+.btn.diff.pro{background:linear-gradient(135deg, #c084fc 0%, #7c3aed 100%);color:#f5f3ff}
+
+/* Undo / redo */
+.btn.action.undo,.btn.action.redo{background:linear-gradient(135deg, #94a3b8 0%, #64748b 100%)}
+.btn.action.undo:hover,.btn.action.redo:hover{background:linear-gradient(135deg, #7d8ea3 0%, #526075 100%)}
+.btn:disabled{opacity:0.45;cursor:default;transform:none;box-shadow:0 2px 4px rgba(0,0,0,.1)}
+
+/* Notes mode toggle */
+.btn.notes-toggle{background:linear-gradient(135deg, #fef3c7 0%, #fcd34d 100%);color:#78350f;font-weight:600}
+.btn.notes-toggle:hover{background:linear-gradient(135deg, #fde68a 0%, #fbbf24 100%)}
+.btn.notes-toggle.active{background:linear-gradient(135deg, #f59e0b 0%, #d97706 100%);color:#fffbeb;box-shadow:0 0 10px rgba(245,158,11,0.7)}
+
+/* Pencil marks: a 3x3 mini-grid of candidate digits inside an empty cell */
+.notes{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    grid-template-rows:repeat(3, 1fr);
+    width:100%;
+    height:100%;
+    pointer-events:none;
+}
+.note{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:11px;
+    line-height:1;
+    color:#64748b;
+    font-weight:600;
+}
+.sudoku-root.dark-mode .note{color:#94a3b8}
+
+/* Keyboard focus on the grid (single tab stop, arrows move the active cell) */
+.board:focus-visible{outline:3px solid #4b9cff;outline-offset:3px}
+
+/* Status line: timer and notes-mode flag */
+.status{display:flex;gap:14px;align-items:center}
+.status .timer{font-style:normal;font-weight:700;font-variant-numeric:tabular-nums;color:#374151}
+.sudoku-root.dark-mode .status .timer{color:#e5e7eb}
+.status .notes-flag{color:#b45309;font-weight:600;font-style:normal}
+.sudoku-root.dark-mode .status .notes-flag{color:#fbbf24}
