@@ -15,6 +15,7 @@ not just by how many clues were removed.
 | [Solving techniques](docs/solving-techniques.md) | The human techniques the grader replays, with external references |
 | [Testing and CI](docs/testing.md) | The unit test suite, the PowerShell smoke test, and the pipeline |
 | [Lessons learned](docs/lessons-learned.md) | Every bug found along the way - how it was spotted, how the fix was verified, and what it taught |
+| [Security posture](docs/security.md) | What is checked in and what never is, CI permissions, and the rules for the Azure rollout |
 | [Tech stack](docs/tech-stack.md) | Frameworks, tools and the reasoning behind each choice |
 
 ## Features
