@@ -68,11 +68,18 @@ public sealed class SudokuGenerator : ISudokuGenerator
         _ => tier == TechniqueTier.Advanced
     };
 
+    // A miss below the band beats a miss above it: a Medium that plays slightly
+    // easy is a mild disappointment, a Medium that needs chains is a wall. So
+    // Advanced is scored far from the Medium band while Singles sits adjacent.
     private static int DistanceToBand(Difficulty difficulty, TechniqueTier tier) => difficulty switch
     {
         Difficulty.Easy => (int)tier,
-        Difficulty.Medium => Math.Min(Math.Abs((int)tier - (int)TechniqueTier.LockedCandidate),
-                                      Math.Abs((int)tier - (int)TechniqueTier.Pair)),
+        Difficulty.Medium => tier switch
+        {
+            TechniqueTier.LockedCandidate or TechniqueTier.Pair => 0,
+            TechniqueTier.Singles => 1,
+            _ => 3
+        },
         _ => (int)TechniqueTier.Advanced - (int)tier
     };
 
