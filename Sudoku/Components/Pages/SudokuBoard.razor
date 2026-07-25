@@ -134,6 +134,7 @@
             </button>
             @if (customizeOpen)
             {
+                <div class="customize-hint">Drag a ring for a hue, or click a colour chip for the full picker (any colour, black and white).</div>
                 <div class="wheel-list">
                     @for (int w = 0; w < 4; w++)
                     {
@@ -151,9 +152,11 @@
                                  @onpointerleave="WheelUp"></div>
                             <div class="wheel-meta">
                                 <span class="wheel-name">@WheelNames[i]</span>
-                                <label class="swatch" style="background:@GetWheel(i)" title="Pick an exact colour (including black and white)">
+                                <label class="chip" title="Pick an exact colour (including black and white)">
                                     <input type="color" value="@GetWheel(i)" @oninput="@(e => SetWheel(i, e.Value?.ToString()))" />
-                                    @GetWheel(i)
+                                    <span class="chip-color" style="background:@GetWheel(i)"></span>
+                                    <span class="chip-hex">@GetWheel(i)</span>
+                                    <svg class="chip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m2 22 1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z"/></svg>
                                 </label>
                             </div>
                         </div>
