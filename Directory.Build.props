@@ -1,0 +1,12 @@
+<Project>
+
+  <!-- Shared build settings for every project in the solution. Keep per-project
+       csproj files for what genuinely differs (SDK type, references). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+</Project>
