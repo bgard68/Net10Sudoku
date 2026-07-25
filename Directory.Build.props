@@ -9,4 +9,20 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
+  <!-- Dependency vulnerability auditing. "all" audits transitive packages as
+       well as direct ones; without it an advisory against something the test
+       SDK or xunit pulls in is never reported.
+
+       The audit codes are deliberately held back from TreatWarningsAsErrors.
+       They fire on someone else's disclosure timing, so leaving them as errors
+       turns a third party publishing a CVE into an immediate build and CI
+       outage on unrelated work. As warnings they still show up in every build
+       log and in Dependabot alerts, and the fix arrives as a bump PR. Drop the
+       WarningsNotAsErrors line if you would rather the build stop dead. -->
+  <PropertyGroup>
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
+  </PropertyGroup>
+
 </Project>
