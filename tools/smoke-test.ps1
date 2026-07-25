@@ -125,8 +125,16 @@ if ($StartServer) {
     $env:ASPNETCORE_URLS = $BaseUrl
     # Content root must be the web project folder so wwwroot and the static
     # asset manifest resolve; run the DLL directly so it is one killable process.
-    $serverProcess = Start-Process -FilePath 'dotnet' -ArgumentList @($dll.FullName) `
-        -WorkingDirectory (Join-Path $repoRoot 'Sudoku') -PassThru -WindowStyle Hidden
+    $startArgs = @{
+        FilePath         = 'dotnet'
+        ArgumentList     = @($dll.FullName)
+        WorkingDirectory = (Join-Path $repoRoot 'Sudoku')
+        PassThru         = $true
+    }
+    # -WindowStyle exists only on Windows PowerShell/pwsh-on-Windows; Linux
+    # and macOS pwsh reject the parameter outright.
+    if ($env:OS -eq 'Windows_NT') { $startArgs.WindowStyle = 'Hidden' }
+    $serverProcess = Start-Process @startArgs
 
     $ready = $false
     foreach ($attempt in 1..60) {
