@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+# The workflow only reads the repo; never grant the default token more.
+permissions:
+  contents: read
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest

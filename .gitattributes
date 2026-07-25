@@ -1,0 +1,7 @@
+# Normalize all text files to LF in the repository; working tree uses OS defaults.
+* text=auto
+
+# Binary assets
+*.png binary
+*.ico binary
+*.jpg binary
