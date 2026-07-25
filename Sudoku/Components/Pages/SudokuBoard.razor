@@ -15,7 +15,7 @@
     var view = BuildView();
 }
 
-<div class="sudoku-root" @onmouseup="OnMouseUp">
+<div class="sudoku-root" style="@RootStyle" @onmouseup="OnMouseUp">
     <div class="top-strip">
         @* The filled pill doubles as the current-difficulty indicator; clicking
            any pill starts a new game at that level. *@
@@ -86,26 +86,82 @@
     </div>
 
     <div class="side-panel">
-        <div class="pill-row" role="toolbar" aria-label="Game actions">
-            <button class="pill neutral" disabled="@(Session.IsGenerating || !Sudoku.CanUndo)" @onclick="Undo" title="Undo last action">Undo</button>
-            <button class="pill neutral" disabled="@(Session.IsGenerating || !Sudoku.CanRedo)" @onclick="Redo" title="Redo undone action">Redo</button>
-            <button class="pill neutral" disabled="@Session.IsGenerating" @onclick="Clear" title="Erase the selected cell">Erase</button>
-            <button class="pill notes @(Sudoku.NotesMode ? "active" : "")"
-                    disabled="@Session.IsGenerating"
-                    @onclick="ToggleNotes"
-                    title="Toggle notes mode (N)"
-                    aria-pressed="@(Sudoku.NotesMode ? "true" : "false")">Notes</button>
-            <button class="pill hint" disabled="@Session.IsGenerating" @onclick="ApplyHint" title="Reveal the selected cell">Hint</button>
+        <div class="tile-grid" role="toolbar" aria-label="Game actions">
+            <button class="tile undo" disabled="@(Session.IsGenerating || !Sudoku.CanUndo)" @onclick="Undo" title="Undo last action">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+                <span>Undo</span>
+            </button>
+            <button class="tile redo" disabled="@(Session.IsGenerating || !Sudoku.CanRedo)" @onclick="Redo" title="Redo undone action">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg>
+                <span>Redo</span>
+            </button>
+            <button class="tile erase" disabled="@Session.IsGenerating" @onclick="Clear" title="Erase the selected cell">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21H7Z"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>
+                <span>Erase</span>
+            </button>
+            <button class="tile notes" disabled="@Session.IsGenerating" @onclick="ToggleNotes"
+                    title="Toggle notes mode (N)" aria-pressed="@(Sudoku.NotesMode ? "true" : "false")">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                <span>Notes</span>
+                <span class="mini-switch @(Sudoku.NotesMode ? "on" : "")" aria-hidden="true"><span class="knob"></span></span>
+            </button>
         </div>
 
         <NumberPad DigitDone="view.DigitDone"
                    Disabled="Session.IsGenerating"
                    OnPlace="Place" />
 
+        <button class="bigbtn validate" disabled="@Session.IsGenerating" @onclick="Validate">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1 1 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
+            Validate
+        </button>
+        <button class="bigbtn hint" disabled="@Session.IsGenerating" @onclick="ApplyHint" title="Reveal the selected cell">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1.3.5 2.6 1.5 3.5.8.8 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+            Hint
+        </button>
+        <button class="bigbtn solve" disabled="@Session.IsGenerating" @onclick="Solve">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></svg>
+            Solve
+        </button>
+
         <div class="link-row">
-            <button class="linkbtn" disabled="@Session.IsGenerating" @onclick="Validate">Validate</button>
-            <button class="linkbtn" disabled="@Session.IsGenerating" @onclick="Solve">Solve</button>
             <button class="linkbtn" disabled="@Session.IsGenerating" @onclick="ClearAll">Clear all</button>
+        </div>
+
+        <div class="customize">
+            <button class="customize-header" @onclick="(() => customizeOpen = !customizeOpen)" aria-expanded="@(customizeOpen ? "true" : "false")">
+                Customize colors <span class="chev">@(customizeOpen ? "▾" : "▸")</span>
+            </button>
+            @if (customizeOpen)
+            {
+                <div class="wheel-list">
+                    <div class="wheel-row">
+                        <label class="wheel" title="Pick a background colour">
+                            <input type="color" value="@pageBg" @onchange="@(e => pageBg = SanitizeHex(e.Value?.ToString(), DefaultPageBg))" />
+                        </label>
+                        <div class="wheel-meta"><span class="wheel-name">Background</span><span class="swatch" style="background:@pageBg">@pageBg</span></div>
+                    </div>
+                    <div class="wheel-row">
+                        <label class="wheel" title="Pick a grid background colour">
+                            <input type="color" value="@gridBg" @onchange="@(e => gridBg = SanitizeHex(e.Value?.ToString(), DefaultGridBg))" />
+                        </label>
+                        <div class="wheel-meta"><span class="wheel-name">Grid background</span><span class="swatch" style="background:@gridBg">@gridBg</span></div>
+                    </div>
+                    <div class="wheel-row">
+                        <label class="wheel" title="Pick a grid border colour">
+                            <input type="color" value="@gridBorder" @onchange="@(e => gridBorder = SanitizeHex(e.Value?.ToString(), DefaultGridBorder))" />
+                        </label>
+                        <div class="wheel-meta"><span class="wheel-name">Grid borders</span><span class="swatch" style="background:@gridBorder">@gridBorder</span></div>
+                    </div>
+                    <div class="wheel-row">
+                        <label class="wheel" title="Pick a grid number colour">
+                            <input type="color" value="@gridNum" @onchange="@(e => gridNum = SanitizeHex(e.Value?.ToString(), DefaultGridNum))" />
+                        </label>
+                        <div class="wheel-meta"><span class="wheel-name">Grid numbers</span><span class="swatch" style="background:@gridNum">@gridNum</span></div>
+                    </div>
+                    <button class="linkbtn" @onclick="ResetColors">Reset to defaults</button>
+                </div>
+            }
         </div>
     </div>
     </div>
@@ -131,6 +187,38 @@
 
     private bool isDragging;
     private System.Timers.Timer? clock;
+
+    // Board colour customisation. Only the board and page canvas are themed;
+    // every control keeps its own fixed backdrop and text colours, so no
+    // combination of picks can make the controls unreadable.
+    private const string DefaultPageBg = "#0a0a0a";
+    private const string DefaultGridBg = "#1a1a1a";
+    private const string DefaultGridBorder = "#39ff14";
+    private const string DefaultGridNum = "#ffffff";
+
+    private bool customizeOpen;
+    private string pageBg = DefaultPageBg;
+    private string gridBg = DefaultGridBg;
+    private string gridBorder = DefaultGridBorder;
+    private string gridNum = DefaultGridNum;
+
+    // These values land in a style attribute, so never trust them raw: anything
+    // that is not a #rrggbb hex collapses back to the default.
+    private static string SanitizeHex(string? value, string fallback) =>
+        value is not null && System.Text.RegularExpressions.Regex.IsMatch(value, "^#[0-9a-fA-F]{6}$")
+            ? value
+            : fallback;
+
+    private string RootStyle =>
+        $"--page-bg:{pageBg};--grid-bg:{gridBg};--grid-border:{gridBorder};--grid-num:{gridNum}";
+
+    private void ResetColors()
+    {
+        pageBg = DefaultPageBg;
+        gridBg = DefaultGridBg;
+        gridBorder = DefaultGridBorder;
+        gridNum = DefaultGridNum;
+    }
 
     private string TimeDisplay => Format(Session.Elapsed);
     private string? BestDisplay => Session.BestTime is TimeSpan best ? Format(best) : null;
