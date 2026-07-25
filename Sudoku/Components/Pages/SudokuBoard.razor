@@ -349,6 +349,28 @@
     void Place(int n)
     {
         if (Session.IsGenerating) return;
+
+        // The service ignores impossible placements; without feedback those
+        // no-ops read as "the feature is broken", so explain them instead.
+        if (Sudoku.Selected is not Position p)
+        {
+            Session.Message = Sudoku.NotesMode
+                ? "Select an empty cell first, then tap digits to pencil in notes."
+                : "Select a cell first.";
+            return;
+        }
+        var target = Sudoku.Current[p.Row, p.Col];
+        if (Sudoku.NotesMode && (target.IsGiven || target.Value is not null))
+        {
+            Session.Message = "Notes go in empty cells - pick a cell without a number.";
+            return;
+        }
+        if (!Sudoku.NotesMode && target.IsGiven)
+        {
+            Session.Message = "That's a given clue - it can't be changed.";
+            return;
+        }
+
         Sudoku.Place(n);
         CheckIfSolved();
         _ = Session.PersistAsync();
@@ -387,6 +409,9 @@
     void ToggleNotes()
     {
         Sudoku.ToggleNotesMode();
+        Session.Message = Sudoku.NotesMode
+            ? "Notes mode on - select an empty cell and tap digits to pencil candidates in or out."
+            : "Notes mode off.";
     }
 
     void Validate()
