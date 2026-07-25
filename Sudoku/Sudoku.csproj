@@ -2,6 +2,9 @@
 
   <PropertyGroup>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+    <!-- Enables 'dotnet user-secrets'. Secrets are stored per-user outside
+         the repository, so they cannot be committed by accident. -->
+    <UserSecretsId>3c2bc9df-eb5c-405b-ab23-45a63ae7732d</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

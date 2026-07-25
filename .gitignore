@@ -629,18 +629,40 @@ FodyWeavers.xsd
 # Aspire
 .aspire/
 
-# User secrets
-secrets.json
+# Configuration.
+# Checked in: appsettings.json (the non-secret baseline) and
+# appsettings.Development.json (shared dev defaults, log levels only).
+# Not checked in: Production / Staging / local overrides - those values come
+# from environment variables or a secret store at deploy time.
+# Anything sensitive in development belongs in user secrets (see below), never
+# in appsettings.Development.json, which IS committed.
+# Note: "appsettings.*.json" requires text between two dots, so it never
+# matches "appsettings.json" itself - no negation is needed for that file.
 appsettings.*.json
-!appsettings.json
 !appsettings.Development.json
+
+# User secrets. "dotnet user-secrets" keeps these outside the repo entirely
+# (%APPDATA%\Microsoft\UserSecrets\<UserSecretsId>); this is belt and braces.
+secrets.json
 .azure
 
-# Security: API keys and secrets
+# Security: API keys and secrets.
+# ".env.*" does not match a bare ".env" (nothing follows the dot), so the
+# plain filename is listed separately - it is the most common one.
+.env
 .env.apikey
 .env.*
 *.key
 *.secret
+
+# Azure tooling output that can carry endpoints, connection strings and key
+# references. Publish profiles (*.pubxml), PublishScripts/ and .azure are
+# already covered by the Visual Studio rules above.
+serviceDependencies.json
+serviceDependencies.*.json
+ServiceConfiguration.*.cscfg
+ApplicationInsights.config
+local.settings.json
 
 # Claude Code personal settings
 .claude/
