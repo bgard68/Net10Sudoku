@@ -37,7 +37,7 @@ public sealed class Board
     // The solved value for a cell, or null when no solution has been recorded.
     public int? SolutionAt(int r, int c) => _solution?[r,c];
 
-    // Create a deep copy of the board (values, given flags and any known solution)
+    // Create a deep copy of the board (values, given flags, notes and any known solution)
     public Board Clone()
     {
         var copy = new Board();
@@ -47,6 +47,8 @@ public sealed class Board
             var v = Cells[r,c].Value;
             var given = Cells[r,c].IsGiven;
             copy.Cells[r,c].Set(v, given);
+            foreach (var note in Cells[r,c].Notes)
+                copy.Cells[r,c].ToggleNote(note);
         }
         if (_solution is not null) copy.SetSolution(_solution);
         return copy;
