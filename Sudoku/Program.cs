@@ -15,7 +15,9 @@ builder.Services.AddRazorComponents()
 // Sudoku DI registrations (Clean Architecture style)
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure();
-builder.Services.AddSingleton<ThemeService>();
+// Scoped, not singleton: in Blazor Server a singleton is shared by every circuit,
+// so one visitor toggling dark mode would change the theme for all of them.
+builder.Services.AddScoped<ThemeService>();
 
 var app = builder.Build();
 
