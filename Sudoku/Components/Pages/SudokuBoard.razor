@@ -85,102 +85,36 @@
         }
     </div>
 
-    @if (isSolved)
-    {
-        <div class="scrolling-text-container">
-            <div class="scrolling-text">CONGRATULATIONS! CONGRATULATIONS! CONGRATULATIONS! CONGRATULATIONS! </div>
-        </div>
-    }
+    <NumberPad DigitDone="view.DigitDone"
+               NotesMode="Sudoku.NotesMode"
+               Disabled="isGenerating"
+               OnPlace="Place"
+               OnToggleNotes="ToggleNotes"
+               OnClear="Clear" />
 
-    <div class="numpad">
-        @for (int n = 1; n <= 9; n++)
-        {
-            var num = n; // Local copy
-            if (view.DigitDone[num])
-            {
-                <button class="btn num complete" disabled title="Completed">&#10003;</button>
-            }
-            else
-            {
-                <button class="btn num" disabled="@isGenerating" @onclick="(() => Place(num))" title="Place @num">@num</button>
-            }
-        }
-        <button class="btn notes-toggle @(Sudoku.NotesMode ? "active" : "")"
-                disabled="@isGenerating"
-                @onclick="ToggleNotes"
-                title="Toggle notes mode (N)"
-                aria-pressed="@(Sudoku.NotesMode ? "true" : "false")">Notes</button>
-        <button class="btn clear" disabled="@isGenerating" @onclick="Clear">Clear</button>
-    </div>
-
-    <div class="status">
-        <span class="timer" role="timer" aria-label="Elapsed time">@TimeDisplay</span>
-        @if (bestTime is TimeSpan best)
-        {
-            <span class="best" title="Fastest solve at this difficulty">Best: @Format(best)</span>
-        }
-        <span class="mistakes @(Sudoku.Mistakes > 0 ? "has-mistakes" : "")">Mistakes: @Sudoku.Mistakes</span>
-        <span>Selected: @(Sudoku.Selected is Position sp ? $"({sp.Row + 1},{sp.Col + 1})" : "none")</span>
-        @if (Sudoku.NotesMode)
-        {
-            <span class="notes-flag">Notes mode</span>
-        }
-    </div>
+    <GameStatusBar TimeDisplay="@TimeDisplay"
+                   BestDisplay="@BestDisplay"
+                   Mistakes="Sudoku.Mistakes"
+                   SelectedText="@SelectedText"
+                   NotesMode="Sudoku.NotesMode" />
 
     @if (isSolved)
     {
-        <div class="win-stats" role="status">
-            Solved in @TimeDisplay
-            @if (newBest)
-            {
-                <span class="new-best">New best time!</span>
-            }
-            else if (usedAutoSolve)
-            {
-                <span>(auto-solve does not count for records)</span>
-            }
-            else if (bestTime is TimeSpan b)
-            {
-                <span>(best: @Format(b))</span>
-            }
-            <span>&middot; Mistakes: @Sudoku.Mistakes</span>
-        </div>
+        <WinBanner TimeDisplay="@TimeDisplay"
+                   NewBest="newBest"
+                   AutoSolved="usedAutoSolve"
+                   BestDisplay="@BestDisplay"
+                   Mistakes="Sudoku.Mistakes" />
+        <Celebration />
     }
 
     @if (message is not null && !isSolved)
     {
         <div class="message">@message</div>
     }
-
-    @if (isSolved)
-    {
-        <div class="starbursts-container">
-            @* Laid out once in BuildFireworks(); randomising here would reshuffle
-               every particle on each re-render and defeat the diff. *@
-            @foreach (var burst in fireworks)
-            {
-                <div class="starburst"
-                     style="left: @(burst.X)%;
-                            top: @(burst.Y)%;
-                            animation-delay: @(burst.Delay)ms;">
-
-                    @foreach (var particle in burst.Particles)
-                    {
-                        <div class="particle"
-                             style="--angle: @(particle.Angle)deg;
-                                    --distance: @(particle.Distance)px;
-                                    background: @burst.Color;
-                                    animation-delay: @(particle.Delay)ms;"></div>
-                    }
-                </div>
-            }
-        </div>
-    }
 </div>
 
 @code {
-    private sealed record Particle(double Angle, int Distance, int Delay);
-    private sealed record Starburst(int X, int Y, int Delay, string Color, IReadOnlyList<Particle> Particles);
     private sealed record BoardView(bool[,] Conflicts, bool[] DigitDone);
 
     private bool isDragging;
@@ -189,7 +123,6 @@
     private int boardKey = 0;
     private bool isSolved = false;
     private Difficulty currentDifficulty = Difficulty.Easy;
-    private IReadOnlyList<Starburst> fireworks = Array.Empty<Starburst>();
     private System.Timers.Timer? clock;
     private DateTime startedUtc = DateTime.UtcNow;
     private TimeSpan elapsed;
@@ -199,6 +132,8 @@
     private bool usedAutoSolve;
 
     private string TimeDisplay => Format(elapsed);
+    private string? BestDisplay => bestTime is TimeSpan best ? Format(best) : null;
+    private string SelectedText => Sudoku.Selected is Position sp ? $"({sp.Row + 1},{sp.Col + 1})" : "none";
     private static string Format(TimeSpan t) => $"{(int)t.TotalMinutes:00}:{t.Seconds:00}";
     private string? ActiveDescendant => Sudoku.Selected is Position p ? CellId(p.Row, p.Col) : null;
     private static string CellId(int r, int c) => $"cell-{r}-{c}";
@@ -391,7 +326,6 @@
     {
         isSolved = true;
         message = null;
-        fireworks = BuildFireworks();
         elapsed = DateTime.UtcNow - startedUtc;
 
         // Auto-solved games never set records - the record belongs to the player.
@@ -563,36 +497,4 @@
         return $"cell{(cell.IsGiven ? " given" : "")}{(isSelected ? " selected" : "")}{(sameRow ? " rowhl" : "")}{(sameCol ? " colhl" : "")}{(sameBlock ? " blockhl" : "")}{(sameValue ? " valhl" : "")}{(hasConflict ? " conflict" : "")}{borderClasses}";
     }
 
-    // Positions are fixed here rather than in the markup so that later re-renders
-    // reuse the same 25 bursts instead of generating a fresh set each time.
-    static IReadOnlyList<Starburst> BuildFireworks()
-    {
-        var bursts = new List<Starburst>(25);
-        for (int i = 0; i < 25; i++)
-        {
-            var delay = Random.Shared.Next(0, 2500);
-            var particles = new List<Particle>(20);
-            for (int p = 0; p < 20; p++)
-            {
-                particles.Add(new Particle(
-                    Angle: p * 18.0, // 360/20 = 18 degrees
-                    Distance: Random.Shared.Next(50, 90),
-                    Delay: delay + Random.Shared.Next(0, 200)));
-            }
-
-            bursts.Add(new Starburst(
-                X: Random.Shared.Next(10, 90),
-                Y: Random.Shared.Next(15, 85),
-                Delay: delay,
-                Color: GetRandomColor(),
-                Particles: particles));
-        }
-        return bursts;
-    }
-
-    static string GetRandomColor()
-    {
-        var colors = new[] { "#ff0080", "#00ffff", "#ffff00", "#ff00ff", "#00ff00", "#ff8800", "#0088ff", "#ff0000", "#8800ff", "#ff69b4", "#00fa9a", "#ffd700", "#ff1493", "#7fff00" };
-        return colors[Random.Shared.Next(colors.Length)];
-    }
 }

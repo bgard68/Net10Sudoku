@@ -1,0 +1,24 @@
+<div class="win-stats" role="status">
+    Solved in @TimeDisplay
+    @if (NewBest)
+    {
+        <span class="new-best">New best time!</span>
+    }
+    else if (AutoSolved)
+    {
+        <span>(auto-solve does not count for records)</span>
+    }
+    else if (BestDisplay is not null)
+    {
+        <span>(best: @BestDisplay)</span>
+    }
+    <span>&middot; Mistakes: @Mistakes</span>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string TimeDisplay { get; set; } = "";
+    [Parameter] public bool NewBest { get; set; }
+    [Parameter] public bool AutoSolved { get; set; }
+    [Parameter] public string? BestDisplay { get; set; }
+    [Parameter] public int Mistakes { get; set; }
+}

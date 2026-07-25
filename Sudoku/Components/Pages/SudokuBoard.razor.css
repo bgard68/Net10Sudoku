@@ -1,9 +1,9 @@
 .sudoku-root{display:flex;flex-direction:column;gap:12px;align-items:flex-start;padding:20px;position:relative}
 .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .toolbar .spacer{width:24px}
-.btn{padding:8px 14px;border-radius:8px;border:none;cursor:pointer;font-weight:500;font-size:14px;transition:all .2s ease;box-shadow:0 2px 4px rgba(0,0,0,.1)}
-.btn:hover{transform:translateY(-1px);box-shadow:0 4px 8px rgba(0,0,0,.15)}
-.btn:active{transform:translateY(0);box-shadow:0 1px 2px rgba(0,0,0,.1)}
+.sudoku-root ::deep .btn{padding:8px 14px;border-radius:8px;border:none;cursor:pointer;font-weight:500;font-size:14px;transition:all .2s ease;box-shadow:0 2px 4px rgba(0,0,0,.1)}
+.sudoku-root ::deep .btn:hover{transform:translateY(-1px);box-shadow:0 4px 8px rgba(0,0,0,.15)}
+.sudoku-root ::deep .btn:active{transform:translateY(0);box-shadow:0 1px 2px rgba(0,0,0,.1)}
 .btn.diff.easy{background:linear-gradient(135deg, #a8e6cf 0%, #7bc993 100%);color:#2d5f3f}
 .btn.diff.med{background:linear-gradient(135deg, #ffd89b 0%, #ffb366 100%);color:#8b5a00}
 .btn.diff.hard{background:linear-gradient(135deg, #ff9a9e 0%, #ff6b81 100%);color:#8b1a2b}
@@ -40,13 +40,13 @@
 }
 .celebration .cell{animation:cell-celebration 0.8s ease-in-out infinite}
 
-.numpad{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-.btn.num{width:40px;height:40px;padding:0;background:linear-gradient(135deg, #e0e7ff 0%, #cfd9fe 100%);color:#3730a3;font-weight:600;font-size:16px}
-.btn.num:hover{background:linear-gradient(135deg, #c7d2fe 0%, #a5b4fc 100%)}
-.btn.clear{background:linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);color:#7f1d1d;font-weight:600}
-.btn.clear:hover{background:linear-gradient(135deg, #fca5a5 0%, #f87171 100%)}
+.sudoku-root ::deep .numpad{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.sudoku-root ::deep .btn.num{width:40px;height:40px;padding:0;background:linear-gradient(135deg, #e0e7ff 0%, #cfd9fe 100%);color:#3730a3;font-weight:600;font-size:16px}
+.sudoku-root ::deep .btn.num:hover{background:linear-gradient(135deg, #c7d2fe 0%, #a5b4fc 100%)}
+.sudoku-root ::deep .btn.clear{background:linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);color:#7f1d1d;font-weight:600}
+.sudoku-root ::deep .btn.clear:hover{background:linear-gradient(135deg, #fca5a5 0%, #f87171 100%)}
 .message{min-height:1.2em;font-size:14px;color:#4b5563;font-weight:500}
-.status{font-size:12px;color:#6b7280;font-style:italic}
+.sudoku-root ::deep .status{font-size:12px;color:#6b7280;font-style:italic}
 
 /* Adjusted block overlay sizing and visibility */
 .board{position:relative; overflow:hidden;}
@@ -80,7 +80,7 @@
   filter:saturate(1.25) brightness(1.2);
 }
 
-.scrolling-text-container{
+.sudoku-root ::deep .scrolling-text-container{
     position:absolute;
     top:-10px;
     left:-10px;
@@ -90,7 +90,7 @@
     overflow:hidden;
 }
 
-.scrolling-text{
+.sudoku-root ::deep .scrolling-text{
     position:absolute;
     font-size:28px;
     font-weight:900;
@@ -144,13 +144,13 @@
 }
 
 /* Professional Starbursts Container */
-.starbursts-container{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;overflow:hidden;perspective:1000px}
+.sudoku-root ::deep .starbursts-container{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;overflow:hidden;perspective:1000px}
 
 /* Individual Starburst */
-.starburst{position:absolute;width:0;height:0;transform:translate(-50%,-50%);transform-style:preserve-3d}
+.sudoku-root ::deep .starburst{position:absolute;width:0;height:0;transform:translate(-50%,-50%);transform-style:preserve-3d}
 
 /* Professional Particle with Realistic Physics */
-.particle{
+.sudoku-root ::deep .particle{
     position:absolute;
     width:4px;
     height:16px;
@@ -164,7 +164,7 @@
 }
 
 /* Realistic long trailing effect */
-.particle::after{
+.sudoku-root ::deep .particle::after{
     content:'';
     position:absolute;
     width:2px;
@@ -228,10 +228,10 @@
 }
 
 /* Remove solid circles from fanfare */
-.starburst::before, .starburst::after, .particle::before { content:none !important; display:none !important; box-shadow:none !important; animation:none !important; }
+.sudoku-root ::deep .starburst::before, .sudoku-root ::deep .starburst::after, .sudoku-root ::deep .particle::before { content:none !important; display:none !important; box-shadow:none !important; animation:none !important; }
 
 /* Professional Shockwave Ring */
-.starburst::before{
+.sudoku-root ::deep .starburst::before{
     content:'';
     position:absolute;
     top:50%;
@@ -369,7 +369,7 @@
     50% { transform: scale(1.02); filter: brightness(1.5) hue-rotate(0deg); }
 }
 
-.sudoku-root.dark-mode .scrolling-text {
+.sudoku-root.dark-mode ::deep .scrolling-text {
     color: #39ff14;
     text-shadow:
         0 0 5px #39ff14,
@@ -411,13 +411,13 @@
 }
 
 /* Completed number button state */
-.btn.num.complete{
+.sudoku-root ::deep .btn.num.complete{
     background:linear-gradient(135deg, #b7ffc3 0%, #69f0ae 100%);
     color:#0b3d2e;
     cursor:default;
     box-shadow:0 0 10px rgba(105,240,174,0.7), 0 0 20px rgba(105,240,174,0.5);
 }
-.btn.num.complete:disabled{ opacity:0.95; }
+.sudoku-root ::deep .btn.num.complete:disabled{ opacity:0.95; }
 
 /* Professional difficulty button */
 .btn.diff.pro{background:linear-gradient(135deg, #c084fc 0%, #7c3aed 100%);color:#f5f3ff}
@@ -425,12 +425,12 @@
 /* Undo / redo */
 .btn.action.undo,.btn.action.redo{background:linear-gradient(135deg, #94a3b8 0%, #64748b 100%)}
 .btn.action.undo:hover,.btn.action.redo:hover{background:linear-gradient(135deg, #7d8ea3 0%, #526075 100%)}
-.btn:disabled{opacity:0.45;cursor:default;transform:none;box-shadow:0 2px 4px rgba(0,0,0,.1)}
+.sudoku-root ::deep .btn:disabled{opacity:0.45;cursor:default;transform:none;box-shadow:0 2px 4px rgba(0,0,0,.1)}
 
 /* Notes mode toggle */
-.btn.notes-toggle{background:linear-gradient(135deg, #fef3c7 0%, #fcd34d 100%);color:#78350f;font-weight:600}
-.btn.notes-toggle:hover{background:linear-gradient(135deg, #fde68a 0%, #fbbf24 100%)}
-.btn.notes-toggle.active{background:linear-gradient(135deg, #f59e0b 0%, #d97706 100%);color:#fffbeb;box-shadow:0 0 10px rgba(245,158,11,0.7)}
+.sudoku-root ::deep .btn.notes-toggle{background:linear-gradient(135deg, #fef3c7 0%, #fcd34d 100%);color:#78350f;font-weight:600}
+.sudoku-root ::deep .btn.notes-toggle:hover{background:linear-gradient(135deg, #fde68a 0%, #fbbf24 100%)}
+.sudoku-root ::deep .btn.notes-toggle.active{background:linear-gradient(135deg, #f59e0b 0%, #d97706 100%);color:#fffbeb;box-shadow:0 0 10px rgba(245,158,11,0.7)}
 
 /* Pencil marks: a 3x3 mini-grid of candidate digits inside an empty cell */
 .notes{
@@ -456,32 +456,32 @@
 .board:focus-visible{outline:3px solid #4b9cff;outline-offset:3px}
 
 /* Status line: timer, best time, mistakes and notes-mode flag */
-.status{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
-.status .timer{font-style:normal;font-weight:700;font-variant-numeric:tabular-nums;color:#374151}
-.sudoku-root.dark-mode .status .timer{color:#e5e7eb}
-.status .best{font-style:normal;font-weight:600;font-variant-numeric:tabular-nums;color:#047857}
-.sudoku-root.dark-mode .status .best{color:#34d399}
-.status .mistakes{font-style:normal;font-variant-numeric:tabular-nums}
-.status .mistakes.has-mistakes{color:#b91c1c;font-weight:600}
-.sudoku-root.dark-mode .status .mistakes.has-mistakes{color:#f87171}
-.status .notes-flag{color:#b45309;font-weight:600;font-style:normal}
-.sudoku-root.dark-mode .status .notes-flag{color:#fbbf24}
+.sudoku-root ::deep .status{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.sudoku-root ::deep .status .timer{font-style:normal;font-weight:700;font-variant-numeric:tabular-nums;color:#374151}
+.sudoku-root.dark-mode ::deep .status .timer{color:#e5e7eb}
+.sudoku-root ::deep .status .best{font-style:normal;font-weight:600;font-variant-numeric:tabular-nums;color:#047857}
+.sudoku-root.dark-mode ::deep .status .best{color:#34d399}
+.sudoku-root ::deep .status .mistakes{font-style:normal;font-variant-numeric:tabular-nums}
+.sudoku-root ::deep .status .mistakes.has-mistakes{color:#b91c1c;font-weight:600}
+.sudoku-root.dark-mode ::deep .status .mistakes.has-mistakes{color:#f87171}
+.sudoku-root ::deep .status .notes-flag{color:#b45309;font-weight:600;font-style:normal}
+.sudoku-root.dark-mode ::deep .status .notes-flag{color:#fbbf24}
 
 /* Win banner: time, record status and mistakes */
-.win-stats{
+.sudoku-root ::deep .win-stats{
     display:flex;gap:10px;align-items:center;flex-wrap:wrap;
     font-size:16px;font-weight:700;color:#065f46;
     background:linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
     border-radius:10px;padding:10px 16px;
     box-shadow:0 0 12px rgba(52,211,153,0.5);
 }
-.win-stats .new-best{
+.sudoku-root ::deep .win-stats .new-best{
     color:#92400e;
     background:linear-gradient(135deg, #fde68a 0%, #fbbf24 100%);
     border-radius:6px;padding:2px 8px;
     animation:selpulse 1.2s ease-in-out infinite;
 }
-.sudoku-root.dark-mode .win-stats{
+.sudoku-root.dark-mode ::deep .win-stats{
     color:#a7f3d0;
     background:linear-gradient(135deg, rgba(6,95,70,0.6) 0%, rgba(4,120,87,0.6) 100%);
 }

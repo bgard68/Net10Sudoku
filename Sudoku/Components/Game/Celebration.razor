@@ -1,0 +1,71 @@
+@* Rendered only while a win is showing; the parent's conditional render gives
+   this component a fresh instance per win, so the burst layout is generated
+   once in OnInitialized and stays stable across re-renders - randomising in
+   the markup would rebuild all 500 particles on every diff. *@
+
+<div class="scrolling-text-container">
+    <div class="scrolling-text">CONGRATULATIONS! CONGRATULATIONS! CONGRATULATIONS! CONGRATULATIONS! </div>
+</div>
+
+<div class="starbursts-container">
+    @foreach (var burst in fireworks)
+    {
+        <div class="starburst"
+             style="left: @(burst.X)%;
+                    top: @(burst.Y)%;
+                    animation-delay: @(burst.Delay)ms;">
+
+            @foreach (var particle in burst.Particles)
+            {
+                <div class="particle"
+                     style="--angle: @(particle.Angle)deg;
+                            --distance: @(particle.Distance)px;
+                            background: @burst.Color;
+                            animation-delay: @(particle.Delay)ms;"></div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private sealed record Particle(double Angle, int Distance, int Delay);
+    private sealed record Starburst(int X, int Y, int Delay, string Color, IReadOnlyList<Particle> Particles);
+
+    private IReadOnlyList<Starburst> fireworks = Array.Empty<Starburst>();
+
+    protected override void OnInitialized()
+    {
+        fireworks = BuildFireworks();
+    }
+
+    static IReadOnlyList<Starburst> BuildFireworks()
+    {
+        var bursts = new List<Starburst>(25);
+        for (int i = 0; i < 25; i++)
+        {
+            var delay = Random.Shared.Next(0, 2500);
+            var particles = new List<Particle>(20);
+            for (int p = 0; p < 20; p++)
+            {
+                particles.Add(new Particle(
+                    Angle: p * 18.0, // 360/20 = 18 degrees
+                    Distance: Random.Shared.Next(50, 90),
+                    Delay: delay + Random.Shared.Next(0, 200)));
+            }
+
+            bursts.Add(new Starburst(
+                X: Random.Shared.Next(10, 90),
+                Y: Random.Shared.Next(15, 85),
+                Delay: delay,
+                Color: GetRandomColor(),
+                Particles: particles));
+        }
+        return bursts;
+    }
+
+    static string GetRandomColor()
+    {
+        var colors = new[] { "#ff0080", "#00ffff", "#ffff00", "#ff00ff", "#00ff00", "#ff8800", "#0088ff", "#ff0000", "#8800ff", "#ff69b4", "#00fa9a", "#ffd700", "#ff1493", "#7fff00" };
+        return colors[Random.Shared.Next(colors.Length)];
+    }
+}
