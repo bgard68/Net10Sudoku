@@ -74,6 +74,34 @@ timer thread before marshalling to Blazor's sync context.
 **Lesson:** In Blazor Server, *all* component state access belongs on the
 sync context - including the reads and increments that look harmless.
 
+## Browser rendering
+
+### The CSS transition that silently ate a feature
+**Bug:** The board colour customisation sets CSS custom properties on the
+play area (`--grid-bg` and friends), which the cells consume via `var()`.
+The grid-background wheel did nothing: cells kept their old colour
+indefinitely, even though the variable was verifiably updated on every
+ancestor and the stylesheet rule was correct. The culprit was the cells'
+`transition: background .2s` - in Chromium, a background transition whose
+change arrives through an *inherited custom property* can freeze mid-flight
+and never deliver the new value. Two properties on the same element, driven
+by the same inline style, behaved differently: `color` (not transitioned)
+updated instantly while `background` (transitioned) stayed stale forever.
+**Fix:** The cell transition covers `box-shadow` only; background changes
+apply instantly.
+**Diagnosis path worth remembering:** confirm the variable's computed value
+at the target element, enumerate the matching stylesheet rules, reproduce
+with an inline style on the same element, reproduce on a *fresh* element
+(which worked - the giveaway), then diff what the two elements have -
+leaving the transition as the only suspect. Setting `transition: none`
+snapped the colour in instantly, confirming it.
+**Lesson:** When a style "doesn't apply", the value pipeline can be perfect
+and the *animation machinery* can still be the thing eating it. Transitions
+belong on properties you intend to animate, not on everything that might
+change - and a feature that only manipulates styles still needs live
+browser verification, because no compiler or unit test sees this class of
+failure.
+
 ## Cross-platform tooling
 
 ### PowerShell is two platforms wearing one syntax
