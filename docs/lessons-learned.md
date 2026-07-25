@@ -102,6 +102,21 @@ change - and a feature that only manipulates styles still needs live
 browser verification, because no compiler or unit test sees this class of
 failure.
 
+### The class collision that made a button click-transparent
+**Bug:** A player reported the pencil-notes feature as "not implemented" -
+clicking the Notes button did nothing. The in-cell pencil-mark overlay used
+a CSS class named `notes` with `pointer-events:none` (so marks never block
+cell clicks); the Notes *button* also carried a `notes` class, so the bare
+`.notes` rule made the button itself click-transparent. Every real mouse
+click passed straight through it. The same rule's grid styles were also
+quietly mangling the button's layout.
+**Fix:** The overlay class is renamed `pencil-marks`, with a comment at the
+rule explaining why the obvious name is dangerous.
+**Lesson:** Generic class names are collisions waiting to happen, even in
+scoped CSS - isolation namespaces per component, not per element role
+within a component. Name classes for what they style, not for the feature
+they belong to.
+
 ## Cross-platform tooling
 
 ### PowerShell is two platforms wearing one syntax
@@ -141,6 +156,34 @@ most-constrained-cell, ~45x faster generation), the old naive solution
 counter was kept in the test suite and an agreement test added.
 **Lesson:** An independent, obviously-correct implementation is the
 cheapest insurance an optimization can buy.
+
+### Synthetic events are not real input
+**Bug (in the verification, not the app):** The click-transparent Notes
+button above shipped as "browser-verified" - because the verification
+dispatched synthetic events (`element.click()`, constructed
+`PointerEvent`s) directly at the element. Dispatched events skip hit
+testing entirely, so `pointer-events:none` never got exercised: the checks
+passed against a button no real mouse could reach. The bug was only
+reproduced when the flow was driven through real input.
+**Fix / practice:** UI verification must include the real input pipeline -
+actual clicks at coordinates resolved through the compositor - for at
+least the happy path. Synthetic dispatch remains useful for fast state
+checks, but it verifies handlers, not reachability.
+**Lesson:** A test that bypasses the layer where the bug lives will pass
+forever. Hit testing, focus, overlays and z-order only exist for real
+input - and a user saying "it doesn't work" outranks a green check that
+never touched what the user touches.
+
+### Silent no-ops read as missing features
+**Bug (UX):** Notes mode ignored digit presses whenever no cell - or a
+filled or given cell - was selected, correctly but silently. To a player,
+a feature that gives zero feedback on every attempt is indistinguishable
+from one that was never built, and it was reported exactly that way.
+**Fix:** Every formerly-silent rejection now explains itself (what
+happened, and what to do instead), and toggling notes mode announces how
+to use it.
+**Lesson:** Correct-but-silent is a bug in the user's model even when the
+state machine is right. If an action is refused, say so.
 
 ### Verify in the medium the bug lives in
 **Practice:** Logic claims are proven by unit tests; rendering and
