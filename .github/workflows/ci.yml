@@ -7,16 +7,23 @@ on:
     branches: [main]
 
 # The workflow only reads the repo; never grant the default token more.
+# Note this uses pull_request, not pull_request_target: a fork's PR therefore
+# runs without repository secrets and without write access.
 permissions:
   contents: read
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Do not leave the job token in .git/config on the runner; nothing
+          # here pushes, so the credential is never needed after checkout.
+          persist-credentials: false
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
@@ -34,10 +41,13 @@ jobs:
 
   smoke-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
