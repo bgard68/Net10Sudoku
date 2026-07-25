@@ -12,6 +12,17 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// Configure Antiforgery to work with HTTP in development
+builder.Services.AddAntiforgery(options =>
+{
+    if (builder.Environment.IsDevelopment())
+    {
+        options.Cookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.SameAsRequest;
+        options.FormFieldName = "RequestVerificationToken";
+        options.HeaderName = "X-CSRF-TOKEN";
+    }
+});
+
 // Sudoku DI registrations (Clean Architecture style)
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure();
@@ -29,9 +40,9 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
+    app.UseHttpsRedirection();
 }
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
-app.UseHttpsRedirection();
 
 app.UseAntiforgery();
 
