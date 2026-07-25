@@ -80,8 +80,17 @@ function Invoke-Http {
                 $bodyText = $reader.ReadToEnd()
                 $reader.Dispose()
             } catch { }
-            $ct = [string]$r.ContentType
         }
+        # Content type lives in a different place per edition: a property on
+        # 5.1's HttpWebResponse, under Content.Headers on 7's HttpResponseMessage.
+        try {
+            if ($r -is [System.Net.HttpWebResponse]) {
+                $ct = [string]$r.ContentType
+            }
+            elseif ($r.Content -and $r.Content.Headers -and $r.Content.Headers.ContentType) {
+                $ct = $r.Content.Headers.ContentType.ToString()
+            }
+        } catch { }
         return @{ Status = $status; Body = $bodyText; ContentType = $ct }
     }
 }
