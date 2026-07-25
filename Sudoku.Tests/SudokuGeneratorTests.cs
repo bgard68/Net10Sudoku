@@ -55,7 +55,7 @@ public class SudokuGeneratorTests
         var filled = new Domain.Board();
         for (int r = 0; r < 9; r++)
         for (int c = 0; c < 9; c++)
-            filled.Cells[r, c].Set(board.SolutionAt(r, c));
+            filled.Set(r, c, board.SolutionAt(r, c));
 
         Assert.True(validator.IsComplete(filled));
     }
@@ -71,7 +71,7 @@ public class SudokuGeneratorTests
         for (int r = 0; r < 9; r++)
         for (int c = 0; c < 9; c++)
         {
-            var cell = board.Cells[r, c];
+            var cell = board[r, c];
             Assert.Equal(cell.Value is not null, cell.IsGiven);
         }
     }

@@ -94,10 +94,10 @@ public class UndoRedoAndNotesTests
 
         svc.Place(3);
         Assert.Null(svc.Current.Get(row, col));
-        Assert.True(svc.Current.Cells[row, col].HasNote(3));
+        Assert.True(svc.Current[row, col].HasNote(3));
 
         svc.Place(3);
-        Assert.False(svc.Current.Cells[row, col].HasNote(3));
+        Assert.False(svc.Current[row, col].HasNote(3));
     }
 
     [Fact]
@@ -111,13 +111,13 @@ public class UndoRedoAndNotesTests
         svc.ToggleNotesMode();
         svc.Select(row, otherCol);
         svc.Place(7); // pencil in 7
-        Assert.True(svc.Current.Cells[row, otherCol].HasNote(7));
+        Assert.True(svc.Current[row, otherCol].HasNote(7));
 
         svc.ToggleNotesMode();
         svc.Select(row, col);
         svc.Place(7); // real placement of the same digit in the same row
 
-        Assert.False(svc.Current.Cells[row, otherCol].HasNote(7));
+        Assert.False(svc.Current[row, otherCol].HasNote(7));
     }
 
     [Fact]
@@ -134,12 +134,12 @@ public class UndoRedoAndNotesTests
         svc.ToggleNotesMode();
         svc.Select(row, col);
         svc.Place(7);
-        Assert.False(svc.Current.Cells[row, otherCol].HasNote(7));
+        Assert.False(svc.Current[row, otherCol].HasNote(7));
 
         svc.Undo();
 
         Assert.Null(svc.Current.Get(row, col));
-        Assert.True(svc.Current.Cells[row, otherCol].HasNote(7));
+        Assert.True(svc.Current[row, otherCol].HasNote(7));
     }
 
     // A 41-given Easy board occasionally leaves the first empty cell alone in its
@@ -171,10 +171,10 @@ public class UndoRedoAndNotesTests
         svc.ToggleNotesMode();
         svc.Place(2);
         svc.Place(9);
-        Assert.Equal(2, svc.Current.Cells[row, col].Notes.Count);
+        Assert.Equal(2, svc.Current[row, col].Notes.Count);
 
         svc.Clear();
-        Assert.Empty(svc.Current.Cells[row, col].Notes);
+        Assert.Empty(svc.Current[row, col].Notes);
     }
 
     [Fact]
@@ -191,6 +191,6 @@ public class UndoRedoAndNotesTests
         svc.Place(5);
 
         Assert.Equal(5, svc.Current.Get(row, col));
-        Assert.Empty(svc.Current.Cells[row, col].Notes);
+        Assert.Empty(svc.Current[row, col].Notes);
     }
 }

@@ -25,8 +25,7 @@ public sealed class SudokuSolver : ISudokuSolver
         for (int r = 0; r < 9; r++)
         for (int c = 0; c < 9; c++)
         {
-            var cell = board.Cells[r, c];
-            if (cell.Value is null) cell.Set(state.Values[r * 9 + c]);
+            if (board.Get(r, c) is null) board.Set(r, c, state.Values[r * 9 + c]);
         }
         return true;
     }

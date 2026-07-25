@@ -21,7 +21,7 @@ public class HintTests
         for (int r = 0; r < 9; r++)
         for (int c = 0; c < 9; c++)
         {
-            if (svc.Current.Cells[r, c].IsGiven) continue;
+            if (svc.Current[r, c].IsGiven) continue;
             if (r == wrongRow && c == wrongCol) continue;
             if (svc.Current.Get(r, c) is not null) continue;
 
@@ -117,7 +117,7 @@ public class HintTests
     {
         for (int r = 0; r < 9; r++)
         for (int c = 0; c < 9; c++)
-            if (svc.Current.Cells[r, c].IsGiven) return (r, c);
+            if (svc.Current[r, c].IsGiven) return (r, c);
 
         throw new InvalidOperationException("Board has no given cells.");
     }

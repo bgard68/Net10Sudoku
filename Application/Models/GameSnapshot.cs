@@ -26,7 +26,7 @@ public sealed record GameSnapshot
         for (int c = 0; c < 9; c++)
         {
             int i = r * 9 + c;
-            var cell = board.Cells[r, c];
+            var cell = board[r, c];
             values[i] = cell.Value ?? 0;
             givens[i] = cell.IsGiven;
             foreach (var note in cell.Notes) notes[i] |= 1 << note;
@@ -63,12 +63,12 @@ public sealed record GameSnapshot
             if (v is < 0 or > 9)
                 throw new ArgumentException($"Snapshot value {v} at cell {i} is out of range.");
 
-            if (v != 0) board.Cells[r, c].Set(v, Givens[i]);
+            if (v != 0) board.Set(r, c, v, Givens[i]);
 
             for (int note = 1; note <= 9; note++)
             {
                 if ((NoteMasks[i] & (1 << note)) != 0)
-                    board.Cells[r, c].ToggleNote(note);
+                    board.ToggleNote(r, c, note);
             }
         }
 

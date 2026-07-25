@@ -16,7 +16,7 @@ public class PuzzleGraderTests
         var solved = new Board();
         for (int r = 0; r < 9; r++)
         for (int c = 0; c < 9; c++)
-            solved.Cells[r, c].Set(puzzle.SolutionAt(r, c));
+            solved.Set(r, c, puzzle.SolutionAt(r, c));
 
         Assert.Equal(TechniqueTier.Singles, new PuzzleGrader().Grade(solved));
     }
@@ -31,8 +31,8 @@ public class PuzzleGraderTests
         var nearlySolved = new Board();
         for (int r = 0; r < 9; r++)
         for (int c = 0; c < 9; c++)
-            nearlySolved.Cells[r, c].Set(puzzle.SolutionAt(r, c));
-        nearlySolved.Cells[4, 4].Set(null);
+            nearlySolved.Set(r, c, puzzle.SolutionAt(r, c));
+        nearlySolved.Set(4, 4, null);
 
         Assert.Equal(TechniqueTier.Singles, new PuzzleGrader().Grade(nearlySolved));
     }

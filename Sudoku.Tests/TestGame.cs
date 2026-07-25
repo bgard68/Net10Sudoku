@@ -63,13 +63,13 @@ internal static class TestGame
             for (int v = 1; v <= 9; v++)
             {
                 if (!validator.CanPlace(board, r, c, v)) continue;
-                board.Cells[r, c].Set(v);
+                board.Set(r, c, v);
                 if (Recurse(board, validator, ref count, limit))
                 {
-                    board.Cells[r, c].Set(null);
+                    board.Set(r, c, null);
                     return true;
                 }
-                board.Cells[r, c].Set(null);
+                board.Set(r, c, null);
             }
             return false;
         }

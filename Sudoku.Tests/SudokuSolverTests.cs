@@ -17,8 +17,8 @@ public class SudokuSolverTests
     public void Returns_false_when_the_givens_conflict()
     {
         var board = new Board();
-        board.Cells[0, 0].Set(5);
-        board.Cells[0, 8].Set(5); // same row, same digit
+        board.Set(0, 0, 5);
+        board.Set(0, 8, 5); // same row, same digit
 
         Assert.False(TestGame.Solver().TrySolve(board));
     }
@@ -27,8 +27,8 @@ public class SudokuSolverTests
     public void A_failed_solve_leaves_the_board_untouched()
     {
         var board = new Board();
-        board.Cells[0, 0].Set(5);
-        board.Cells[0, 8].Set(5);
+        board.Set(0, 0, 5);
+        board.Set(0, 8, 5);
 
         TestGame.Solver().TrySolve(board);
 
@@ -43,8 +43,8 @@ public class SudokuSolverTests
     public void CountSolutions_reports_zero_for_a_contradictory_board()
     {
         var board = new Board();
-        board.Cells[0, 0].Set(5);
-        board.Cells[0, 8].Set(5);
+        board.Set(0, 0, 5);
+        board.Set(0, 8, 5);
 
         Assert.Equal(0, TestGame.Solver().CountSolutions(board, 2));
     }

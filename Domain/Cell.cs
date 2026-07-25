@@ -1,5 +1,8 @@
 namespace Sudoku.Domain;
 
+// A cell is readable by anyone but mutable only through Board (the mutators are
+// internal), so every write goes through the domain's own invariant checks and
+// outside layers cannot bypass the rules.
 public sealed class Cell
 {
     private readonly HashSet<int> _notes = new();
@@ -12,15 +15,15 @@ public sealed class Cell
     // Pencil-mark candidates the player has jotted into an empty cell.
     public IReadOnlyCollection<int> Notes => _notes;
 
-    public Cell(int row, int col, int? value = null, bool given = false)
+    internal Cell(int row, int col)
     {
         Row = row;
         Col = col;
-        Value = value;
-        IsGiven = given;
     }
 
-    public void Set(int? value, bool given = false)
+    public bool HasNote(int value) => _notes.Contains(value);
+
+    internal void Set(int? value, bool given = false)
     {
         // Prevent modifying cells that are marked as given (puzzle clues).
         if (IsGiven && !given)
@@ -32,16 +35,14 @@ public sealed class Cell
         if (given) IsGiven = true;
     }
 
-    public bool HasNote(int value) => _notes.Contains(value);
-
-    public void ToggleNote(int value)
+    internal void ToggleNote(int value)
     {
         // Notes only make sense on an empty, editable cell.
         if (IsGiven || Value is not null) return;
         if (!_notes.Remove(value)) _notes.Add(value);
     }
 
-    public void RemoveNote(int value) => _notes.Remove(value);
+    internal void RemoveNote(int value) => _notes.Remove(value);
 
-    public void ClearNotes() => _notes.Clear();
+    internal void ClearNotes() => _notes.Clear();
 }

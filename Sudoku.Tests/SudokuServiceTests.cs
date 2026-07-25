@@ -35,7 +35,7 @@ public class SudokuServiceTests
         for (int r = 0; r < 9; r++)
         for (int c = 0; c < 9; c++)
         {
-            if (svc.Current.Cells[r, c].IsGiven)
+            if (svc.Current[r, c].IsGiven)
                 Assert.NotNull(svc.Current.Get(r, c));
         }
     }
@@ -124,7 +124,7 @@ public class SudokuServiceTests
     {
         for (int r = 0; r < 9; r++)
         for (int c = 0; c < 9; c++)
-            if (board.Cells[r, c].IsGiven) return (r, c);
+            if (board[r, c].IsGiven) return (r, c);
 
         throw new InvalidOperationException("Board has no given cells.");
     }

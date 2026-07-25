@@ -78,20 +78,20 @@ public sealed class SudokuService : IGameService
     {
         if (Selected is null) return;
         var (r, c) = Selected.Value;
-        var cell = Current.Cells[r, c];
+        var cell = Current[r, c];
         if (cell.IsGiven) return;
 
         if (NotesMode)
         {
             if (cell.Value is not null) return;
             _history.Record(Current);
-            cell.ToggleNote(value);
+            Current.ToggleNote(r, c, value);
             return;
         }
 
         if (cell.Value == value) return;
         _history.Record(Current);
-        cell.Set(value);
+        Current.Set(r, c, value);
         RemoveNoteFromPeers(r, c, value);
 
         // Only judged when the answer is known; hand-built boards without a
@@ -104,13 +104,13 @@ public sealed class SudokuService : IGameService
     {
         if (Selected is null) return;
         var (r, c) = Selected.Value;
-        var cell = Current.Cells[r, c];
+        var cell = Current[r, c];
         if (cell.IsGiven) return;
         if (cell.Value is null && cell.Notes.Count == 0) return;
 
         _history.Record(Current);
-        cell.Set(null);
-        cell.ClearNotes();
+        Current.Set(r, c, null);
+        Current.ClearNotes(r, c);
     }
 
     public void ClearAll()
@@ -119,7 +119,7 @@ public sealed class SudokuService : IGameService
         for (int r = 0; r < 9 && !anything; r++)
         for (int c = 0; c < 9 && !anything; c++)
         {
-            var cell = Current.Cells[r, c];
+            var cell = Current[r, c];
             if (!cell.IsGiven && (cell.Value is not null || cell.Notes.Count > 0))
                 anything = true;
         }
@@ -129,10 +129,9 @@ public sealed class SudokuService : IGameService
         for (int r = 0; r < 9; r++)
         for (int c = 0; c < 9; c++)
         {
-            var cell = Current.Cells[r, c];
-            if (cell.IsGiven) continue;
-            cell.Set(null);
-            cell.ClearNotes();
+            if (Current[r, c].IsGiven) continue;
+            Current.Set(r, c, null);
+            Current.ClearNotes(r, c);
         }
     }
 
@@ -162,7 +161,7 @@ public sealed class SudokuService : IGameService
             for (int c = 0; c < 9; c++)
             {
                 var v = Current.SolutionAt(r, c);
-                if (v is > 0 && !Current.Cells[r, c].IsGiven)
+                if (v is > 0 && !Current[r, c].IsGiven)
                     Current.Set(r, c, v.Value);
             }
             return true;
@@ -184,10 +183,9 @@ public sealed class SudokuService : IGameService
         if (Selected is null) return null;
 
         var (r, c) = Selected.Value;
-        var cell = Current.Cells[r, c];
 
         // Can't provide hint for given cells
-        if (cell.IsGiven) return null;
+        if (Current[r, c].IsGiven) return null;
 
         // Prefer the solution captured at generation time. Solving the live board
         // instead would fail outright once the player has entered a wrong value
@@ -215,8 +213,8 @@ public sealed class SudokuService : IGameService
         for (int r = 0; r < 9; r++)
         for (int c = 0; c < 9; c++)
         {
-            if (board.Cells[r, c].IsGiven)
-                bare.Cells[r, c].Set(board.Get(r, c), given: true);
+            if (board[r, c].IsGiven)
+                bare.Set(r, c, board.Get(r, c), given: true);
         }
         return bare;
     }
@@ -227,8 +225,7 @@ public sealed class SudokuService : IGameService
         if (hint is null) return;
         var (pos, value) = hint.Value;
         // Do not overwrite given cells
-        var targetCell = Current.Cells[pos.Row, pos.Col];
-        if (targetCell.IsGiven) return;
+        if (Current[pos.Row, pos.Col].IsGiven) return;
         _history.Record(Current);
         Current.Set(pos.Row, pos.Col, value);
         RemoveNoteFromPeers(pos.Row, pos.Col, value);
@@ -243,11 +240,11 @@ public sealed class SudokuService : IGameService
     // now-stale pencil marks the way a human eraser would.
     private void RemoveNoteFromPeers(int row, int col, int value)
     {
-        for (int c = 0; c < 9; c++) Current.Cells[row, c].RemoveNote(value);
-        for (int r = 0; r < 9; r++) Current.Cells[r, col].RemoveNote(value);
+        for (int c = 0; c < 9; c++) Current.RemoveNote(row, c, value);
+        for (int r = 0; r < 9; r++) Current.RemoveNote(r, col, value);
         int br = row / 3 * 3, bc = col / 3 * 3;
         for (int r = br; r < br + 3; r++)
         for (int c = bc; c < bc + 3; c++)
-            Current.Cells[r, c].RemoveNote(value);
+            Current.RemoveNote(r, c, value);
     }
 }

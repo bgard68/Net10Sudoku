@@ -27,10 +27,10 @@ public class GameSnapshotTests
         for (int c = 0; c < 9; c++)
         {
             Assert.Equal(svc.Current.Get(r, c), restored.Get(r, c));
-            Assert.Equal(svc.Current.Cells[r, c].IsGiven, restored.Cells[r, c].IsGiven);
+            Assert.Equal(svc.Current[r, c].IsGiven, restored[r, c].IsGiven);
             Assert.Equal(
-                svc.Current.Cells[r, c].Notes.OrderBy(n => n),
-                restored.Cells[r, c].Notes.OrderBy(n => n));
+                svc.Current[r, c].Notes.OrderBy(n => n),
+                restored[r, c].Notes.OrderBy(n => n));
             Assert.Equal(svc.Current.SolutionAt(r, c), restored.SolutionAt(r, c));
         }
 

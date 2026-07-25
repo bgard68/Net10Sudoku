@@ -1,21 +1,33 @@
 namespace Sudoku.Domain;
 
+// The 9x9 grid. Cells are exposed read-only through the indexer; every mutation
+// goes through a Board method so the given-cell invariant is enforced in one
+// place and callers can never swap a cell out of the grid.
 public sealed class Board
 {
+    private readonly Cell[,] _cells;
     private int[,]? _solution;
-
-    public Cell[,] Cells { get; }
 
     public Board()
     {
-        Cells = new Cell[9,9];
+        _cells = new Cell[9,9];
         for (var r = 0; r < 9; r++)
         for (var c = 0; c < 9; c++)
-            Cells[r,c] = new Cell(r,c);
+            _cells[r,c] = new Cell(r,c);
     }
 
-    public int? Get(int r, int c) => Cells[r,c].Value;
-    public void Set(int r, int c, int? v, bool given = false) => Cells[r,c].Set(v, given);
+    // Read-only access to a cell; the cell's own mutators are internal.
+    public Cell this[int row, int col] => _cells[row, col];
+
+    public int? Get(int r, int c) => _cells[r,c].Value;
+
+    public void Set(int r, int c, int? v, bool given = false) => _cells[r,c].Set(v, given);
+
+    public void ToggleNote(int r, int c, int value) => _cells[r,c].ToggleNote(value);
+
+    public void RemoveNote(int r, int c, int value) => _cells[r,c].RemoveNote(value);
+
+    public void ClearNotes(int r, int c) => _cells[r,c].ClearNotes();
 
     // True when the puzzle's unique solution is known (set by the generator).
     public bool HasSolution => _solution is not null;
@@ -44,11 +56,10 @@ public sealed class Board
         for (int r = 0; r < 9; r++)
         for (int c = 0; c < 9; c++)
         {
-            var v = Cells[r,c].Value;
-            var given = Cells[r,c].IsGiven;
-            copy.Cells[r,c].Set(v, given);
-            foreach (var note in Cells[r,c].Notes)
-                copy.Cells[r,c].ToggleNote(note);
+            var source = _cells[r,c];
+            copy._cells[r,c].Set(source.Value, source.IsGiven);
+            foreach (var note in source.Notes)
+                copy._cells[r,c].ToggleNote(note);
         }
         if (_solution is not null) copy.SetSolution(_solution);
         return copy;

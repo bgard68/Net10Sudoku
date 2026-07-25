@@ -48,7 +48,7 @@
                 @for (var col = 0; col < 9; col++)
                 {
                     var c = col;
-                    var cell = Sudoku.Current.Cells[r, c];
+                    var cell = Sudoku.Current[r, c];
                     <div id="@CellId(r, c)"
                          class="@GetCellClasses(r, c, view)"
                          role="gridcell"
@@ -415,7 +415,7 @@
 
         if (hint is null)
         {
-            var cell = Sudoku.Current.Cells[Sudoku.Selected.Value.Row, Sudoku.Selected.Value.Col];
+            var cell = Sudoku.Current[Sudoku.Selected.Value.Row, Sudoku.Selected.Value.Col];
             if (cell.IsGiven)
             {
                 message = "Cannot provide hint for given cells.";
@@ -490,7 +490,7 @@
 
     string CellLabel(int r, int c)
     {
-        var cell = Sudoku.Current.Cells[r, c];
+        var cell = Sudoku.Current[r, c];
         var what = cell.Value is int v
             ? cell.IsGiven ? $"{v}, given" : $"{v}"
             : cell.Notes.Count > 0
@@ -510,7 +510,7 @@
         for (int r = 0; r < 9; r++)
         for (int c = 0; c < 9; c++)
         {
-            if (Sudoku.Current.Cells[r, c].Value is int v)
+            if (Sudoku.Current[r, c].Value is int v)
             {
                 rowCount[r, v]++;
                 colCount[c, v]++;
@@ -522,7 +522,7 @@
         for (int r = 0; r < 9; r++)
         for (int c = 0; c < 9; c++)
         {
-            if (Sudoku.Current.Cells[r, c].Value is int v)
+            if (Sudoku.Current[r, c].Value is int v)
                 conflicts[r, c] = rowCount[r, v] > 1 || colCount[c, v] > 1 || boxCount[r / 3 * 3 + c / 3, v] > 1;
         }
 
@@ -543,7 +543,7 @@
     string GetCellClasses(int r, int c, BoardView view)
     {
         if (r < 0 || r >= 9 || c < 0 || c >= 9) return "cell";
-        var cell = Sudoku.Current.Cells[r, c];
+        var cell = Sudoku.Current[r, c];
         bool isSelected = IsSelected(r, c);
         bool sameRow = Sudoku.Selected?.Row == r;
         bool sameCol = Sudoku.Selected?.Col == c;
@@ -553,7 +553,7 @@
         if (Sudoku.Selected is Position sp)
         {
             sameBlock = (r / 3 == sp.Row / 3) && (c / 3 == sp.Col / 3);
-            var selectedVal = Sudoku.Current.Cells[sp.Row, sp.Col].Value;
+            var selectedVal = Sudoku.Current[sp.Row, sp.Col].Value;
             if (selectedVal is int sv && cell.Value is int cv && sv == cv)
             {
                 sameValue = true;

@@ -124,7 +124,7 @@ public sealed class SudokuGenerator : ISudokuGenerator
         for (int c = 0; c < 9; c++)
         {
             if (board.Get(r,c) is not null)
-                board.Cells[r,c].Set(board.Get(r,c), given: true);
+                board.Set(r, c, board.Get(r,c), given: true);
         }
 
         return board;

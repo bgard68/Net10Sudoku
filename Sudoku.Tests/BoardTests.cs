@@ -8,25 +8,25 @@ public class BoardTests
     public void Clone_copies_values_and_given_flags()
     {
         var board = new Board();
-        board.Cells[0, 0].Set(3, given: true);
-        board.Cells[1, 1].Set(7);
+        board.Set(0, 0, 3, given: true);
+        board.Set(1, 1, 7);
 
         var copy = board.Clone();
 
         Assert.Equal(3, copy.Get(0, 0));
-        Assert.True(copy.Cells[0, 0].IsGiven);
+        Assert.True(copy[0, 0].IsGiven);
         Assert.Equal(7, copy.Get(1, 1));
-        Assert.False(copy.Cells[1, 1].IsGiven);
+        Assert.False(copy[1, 1].IsGiven);
     }
 
     [Fact]
     public void Clone_is_independent_of_the_original()
     {
         var board = new Board();
-        board.Cells[2, 2].Set(4);
+        board.Set(2, 2, 4);
 
         var copy = board.Clone();
-        copy.Cells[2, 2].Set(9);
+        copy.Set(2, 2, 9);
 
         Assert.Equal(4, board.Get(2, 2));
         Assert.Equal(9, copy.Get(2, 2));
@@ -77,9 +77,9 @@ public class BoardTests
     public void A_given_cell_cannot_be_overwritten_by_the_player()
     {
         var board = new Board();
-        board.Cells[0, 0].Set(6, given: true);
+        board.Set(0, 0, 6, given: true);
 
-        Assert.Throws<InvalidOperationException>(() => board.Cells[0, 0].Set(1));
+        Assert.Throws<InvalidOperationException>(() => board.Set(0, 0, 1));
     }
 
     private static int[,] FilledGrid()
