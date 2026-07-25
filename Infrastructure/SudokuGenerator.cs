@@ -11,15 +11,13 @@ public sealed class SudokuGenerator : ISudokuGenerator
     private const int MaxAttempts = 60;
 
     private readonly ISudokuSolver _solver;
-    private readonly ISudokuValidator _validator;
     private readonly IPuzzleGrader _grader;
     // Random is not thread-safe; Random.Shared is thread-safe for concurrent Next() calls
     private static Random Rng => Random.Shared;
 
-    public SudokuGenerator(ISudokuSolver solver, ISudokuValidator validator, IPuzzleGrader grader)
+    public SudokuGenerator(ISudokuSolver solver, IPuzzleGrader grader)
     {
         _solver = solver;
-        _validator = validator;
         _grader = grader;
     }
 
@@ -111,13 +109,12 @@ public sealed class SudokuGenerator : ISudokuGenerator
             if (prev is null) continue;
             board.Set(r,c,null);
 
-            if (!HasUniqueSolution(board.Clone()))
+            if (_solver.CountSolutions(board, 2) != 1)
             {
                 board.Set(r,c,prev);
             }
             else
             {
-                board.Cells[r,c].Set(null, given: false);
                 removals--;
             }
         }
@@ -145,30 +142,4 @@ public sealed class SudokuGenerator : ISudokuGenerator
         }
     }
 
-    private bool HasUniqueSolution(Board board)
-    {
-        int count = 0;
-        CountSolutions(board, ref count, 2);
-        return count == 1;
-    }
-
-    private bool CountSolutions(Board board, ref int count, int limit)
-    {
-        if (count >= limit) return true;
-        for (int r = 0; r < 9; r++)
-        for (int c = 0; c < 9; c++)
-        {
-            if (board.Get(r,c) is not null) continue;
-            for (int v = 1; v <= 9; v++)
-            {
-                if (!_validator.CanPlace(board, r, c, v)) continue;
-                board.Set(r,c,v);
-                if (CountSolutions(board, ref count, limit)) { board.Set(r,c,null); return true; }
-                board.Set(r,c,null);
-            }
-            return false;
-        }
-        if (_validator.IsValid(board)) count++;
-        return false;
-    }
 }

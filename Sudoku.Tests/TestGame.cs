@@ -11,14 +11,14 @@ internal static class TestGame
 {
     public static SudokuValidator Validator() => new();
 
-    public static SudokuSolver Solver(SudokuValidator validator) => new(validator);
+    public static SudokuSolver Solver() => new();
 
-    public static SudokuGenerator Generator(SudokuValidator validator, SudokuSolver solver) => new(solver, validator, new PuzzleGrader());
+    public static SudokuGenerator Generator(SudokuValidator validator, SudokuSolver solver) => new(solver, new PuzzleGrader());
 
     public static SudokuService Service()
     {
         var validator = Validator();
-        var solver = Solver(validator);
+        var solver = Solver();
         return new SudokuService(
             Generator(validator, solver),
             solver,

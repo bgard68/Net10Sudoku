@@ -12,7 +12,7 @@ public class SudokuGeneratorTests
     public void Generated_puzzles_have_exactly_one_solution(Difficulty difficulty)
     {
         var validator = TestGame.Validator();
-        var generator = TestGame.Generator(validator, TestGame.Solver(validator));
+        var generator = TestGame.Generator(validator, TestGame.Solver());
 
         var board = generator.Generate(difficulty);
 
@@ -27,7 +27,7 @@ public class SudokuGeneratorTests
     public void Generated_puzzles_record_a_solution_that_agrees_with_the_givens(Difficulty difficulty)
     {
         var validator = TestGame.Validator();
-        var generator = TestGame.Generator(validator, TestGame.Solver(validator));
+        var generator = TestGame.Generator(validator, TestGame.Solver());
 
         var board = generator.Generate(difficulty);
 
@@ -48,7 +48,7 @@ public class SudokuGeneratorTests
     public void Recorded_solution_is_itself_a_complete_valid_grid()
     {
         var validator = TestGame.Validator();
-        var generator = TestGame.Generator(validator, TestGame.Solver(validator));
+        var generator = TestGame.Generator(validator, TestGame.Solver());
 
         var board = generator.Generate(Difficulty.Medium);
 
@@ -64,7 +64,7 @@ public class SudokuGeneratorTests
     public void Every_cell_the_player_can_edit_is_empty_and_every_clue_is_marked_given()
     {
         var validator = TestGame.Validator();
-        var generator = TestGame.Generator(validator, TestGame.Solver(validator));
+        var generator = TestGame.Generator(validator, TestGame.Solver());
 
         var board = generator.Generate(Difficulty.Easy);
 
@@ -82,7 +82,7 @@ public class SudokuGeneratorTests
     public void Easy_puzzles_leave_more_clues_than_harder_ones()
     {
         var validator = TestGame.Validator();
-        var generator = TestGame.Generator(validator, TestGame.Solver(validator));
+        var generator = TestGame.Generator(validator, TestGame.Solver());
 
         int easy = Givens(generator.Generate(Difficulty.Easy));
         int medium = Givens(generator.Generate(Difficulty.Medium));

@@ -10,7 +10,7 @@ public class PuzzleGraderTests
     public void A_solved_board_grades_as_singles()
     {
         var validator = TestGame.Validator();
-        var generator = TestGame.Generator(validator, TestGame.Solver(validator));
+        var generator = TestGame.Generator(validator, TestGame.Solver());
         var puzzle = generator.Generate(Difficulty.Easy);
 
         var solved = new Board();
@@ -25,7 +25,7 @@ public class PuzzleGraderTests
     public void A_board_missing_one_value_grades_as_singles()
     {
         var validator = TestGame.Validator();
-        var generator = TestGame.Generator(validator, TestGame.Solver(validator));
+        var generator = TestGame.Generator(validator, TestGame.Solver());
         var puzzle = generator.Generate(Difficulty.Easy);
 
         var nearlySolved = new Board();
@@ -51,7 +51,7 @@ public class PuzzleGraderTests
     public void Grading_is_repeatable_and_does_not_mutate_the_board()
     {
         var validator = TestGame.Validator();
-        var generator = TestGame.Generator(validator, TestGame.Solver(validator));
+        var generator = TestGame.Generator(validator, TestGame.Solver());
         var puzzle = generator.Generate(Difficulty.Medium);
 
         var before = new int?[9, 9];
@@ -77,7 +77,7 @@ public class PuzzleGraderTests
     public void Generated_puzzles_land_in_their_difficulty_band(Difficulty difficulty)
     {
         var validator = TestGame.Validator();
-        var generator = TestGame.Generator(validator, TestGame.Solver(validator));
+        var generator = TestGame.Generator(validator, TestGame.Solver());
 
         var tier = new PuzzleGrader().Grade(generator.Generate(difficulty));
 
