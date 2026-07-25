@@ -1,4 +1,3 @@
-using Sudoku.Application.Implementations;
 using Sudoku.Application.Services;
 using Sudoku.Domain;
 using Sudoku.Infrastructure;
@@ -23,8 +22,7 @@ internal static class TestGame
             Generator(validator, solver),
             solver,
             validator,
-            new ConflictDetector(validator),
-            new GameState());
+            new ConflictDetector(validator));
     }
 
     // First cell the player is allowed to fill.

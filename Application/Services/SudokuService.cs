@@ -4,21 +4,19 @@ using Sudoku.Domain;
 
 namespace Sudoku.Application.Services;
 
-public sealed class SudokuService
+// Coordinates the use-cases the UI invokes. Owns the per-player game state
+// (board, selection, notes mode, mistakes); undo/redo bookkeeping lives in
+// BoardHistory so this class stays a coordinator rather than a data structure.
+public sealed class SudokuService : IGameService
 {
     private readonly ISudokuGenerator _generator;
     private readonly ISudokuSolver _solver;
     private readonly ISudokuValidator _validator;
     private readonly IConflictDetector _conflicts;
-    private readonly IGameState _state;
+    private readonly BoardHistory _history = new();
 
-    // Undo works on full-board snapshots, so any action - a placement that swept
-    // peers' notes included - reverts atomically with one pop.
-    private readonly Stack<Board> _undo = new();
-    private readonly Stack<Board> _redo = new();
-
-    public Board Current { get => _state.Current; private set => _state.Current = value; }
-    public Position? Selected { get => _state.Selected; private set => _state.Selected = value; }
+    public Board Current { get; private set; } = new();
+    public Position? Selected { get; private set; }
 
     // When on, number entry toggles pencil marks instead of placing values.
     public bool NotesMode { get; private set; }
@@ -27,16 +25,15 @@ public sealed class SudokuService
     // the mistake happened, taking it back doesn't unhappen it.
     public int Mistakes { get; private set; }
 
-    public bool CanUndo => _undo.Count > 0;
-    public bool CanRedo => _redo.Count > 0;
+    public bool CanUndo => _history.CanUndo;
+    public bool CanRedo => _history.CanRedo;
 
-    public SudokuService(ISudokuGenerator generator, ISudokuSolver solver, ISudokuValidator validator, IConflictDetector conflicts, IGameState state)
+    public SudokuService(ISudokuGenerator generator, ISudokuSolver solver, ISudokuValidator validator, IConflictDetector conflicts)
     {
         _generator = generator;
         _solver = solver;
         _validator = validator;
         _conflicts = conflicts;
-        _state = state;
     }
 
     public void New(Difficulty difficulty)
@@ -59,8 +56,7 @@ public sealed class SudokuService
     {
         Selected = null;
         Mistakes = 0;
-        _undo.Clear();
-        _redo.Clear();
+        _history.Clear();
     }
 
     // Adopt a board restored from persisted state (e.g. after a page refresh).
@@ -88,13 +84,13 @@ public sealed class SudokuService
         if (NotesMode)
         {
             if (cell.Value is not null) return;
-            Snapshot();
+            _history.Record(Current);
             cell.ToggleNote(value);
             return;
         }
 
         if (cell.Value == value) return;
-        Snapshot();
+        _history.Record(Current);
         cell.Set(value);
         RemoveNoteFromPeers(r, c, value);
 
@@ -112,7 +108,7 @@ public sealed class SudokuService
         if (cell.IsGiven) return;
         if (cell.Value is null && cell.Notes.Count == 0) return;
 
-        Snapshot();
+        _history.Record(Current);
         cell.Set(null);
         cell.ClearNotes();
     }
@@ -129,7 +125,7 @@ public sealed class SudokuService
         }
         if (!anything) return;
 
-        Snapshot();
+        _history.Record(Current);
         for (int r = 0; r < 9; r++)
         for (int c = 0; c < 9; c++)
         {
@@ -142,22 +138,14 @@ public sealed class SudokuService
 
     public void Undo()
     {
-        if (_undo.Count == 0) return;
-        _redo.Push(Current.Clone());
-        Current = _undo.Pop();
+        if (_history.Undo(Current) is Board previous)
+            Current = previous;
     }
 
     public void Redo()
     {
-        if (_redo.Count == 0) return;
-        _undo.Push(Current.Clone());
-        Current = _redo.Pop();
-    }
-
-    private void Snapshot()
-    {
-        _undo.Push(Current.Clone());
-        _redo.Clear();
+        if (_history.Redo(Current) is Board next)
+            Current = next;
     }
 
     public bool Validate() => _validator.IsValid(Current);
@@ -169,7 +157,7 @@ public sealed class SudokuService
         // would fail as soon as the player has entered a wrong value.
         if (Current.HasSolution)
         {
-            Snapshot();
+            _history.Record(Current);
             for (int r = 0; r < 9; r++)
             for (int c = 0; c < 9; c++)
             {
@@ -184,7 +172,7 @@ public sealed class SudokuService
         var ok = _solver.TrySolve(copy);
         if (ok)
         {
-            Snapshot();
+            _history.Record(Current);
             Current = copy;
             return true;
         }
@@ -241,7 +229,7 @@ public sealed class SudokuService
         // Do not overwrite given cells
         var targetCell = Current.Cells[pos.Row, pos.Col];
         if (targetCell.IsGiven) return;
-        Snapshot();
+        _history.Record(Current);
         Current.Set(pos.Row, pos.Col, value);
         RemoveNoteFromPeers(pos.Row, pos.Col, value);
     }
