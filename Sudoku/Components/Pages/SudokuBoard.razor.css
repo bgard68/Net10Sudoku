@@ -170,8 +170,10 @@
     border-radius:4px;
 }
 
-/* Pencil marks: a 3x3 mini-grid of candidate digits inside an empty cell */
-.notes{
+/* Pencil marks: a 3x3 mini-grid of candidate digits inside an empty cell.
+   Named pencil-marks, not "notes": the Notes button also carries a `notes`
+   class, and a bare .notes rule once made that button click-transparent. */
+.pencil-marks{
     display:grid;
     grid-template-columns:repeat(3, 1fr);
     grid-template-rows:repeat(3, 1fr);

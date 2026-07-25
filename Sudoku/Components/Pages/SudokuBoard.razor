@@ -64,7 +64,7 @@
                     }
                     else if (cell.Notes.Count > 0)
                     {
-                        <div class="notes" aria-hidden="true">
+                        <div class="pencil-marks" aria-hidden="true">
                             @for (int d = 1; d <= 9; d++)
                             {
                                 <span class="note">@(cell.HasNote(d) ? d.ToString() : "")</span>
