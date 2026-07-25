@@ -23,7 +23,6 @@ internal static class TestGame
             Generator(validator, solver),
             solver,
             validator,
-            new SudokuHintProvider(validator),
             new ConflictDetector(validator),
             new GameState());
     }

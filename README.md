@@ -55,7 +55,7 @@ Sudoku.slnx
 |                      models, and SudokuService - the game coordinator
 |-- Infrastructure/    Implementations: backtracking solver, uniqueness-
 |                      verifying generator, technique-replaying grader,
-|                      validator, hint provider, conflict detector
+|                      validator, conflict detector
 |-- Sudoku/            Blazor Server host and UI components
 `-- Sudoku.Tests/      xUnit suite covering domain, generation, grading,
                        hints, undo/redo and notes

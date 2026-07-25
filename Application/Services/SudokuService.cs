@@ -9,7 +9,6 @@ public sealed class SudokuService
     private readonly ISudokuGenerator _generator;
     private readonly ISudokuSolver _solver;
     private readonly ISudokuValidator _validator;
-    private readonly ISudokuHintProvider _hints;
     private readonly IConflictDetector _conflicts;
     private readonly IGameState _state;
 
@@ -31,12 +30,11 @@ public sealed class SudokuService
     public bool CanUndo => _undo.Count > 0;
     public bool CanRedo => _redo.Count > 0;
 
-    public SudokuService(ISudokuGenerator generator, ISudokuSolver solver, ISudokuValidator validator, ISudokuHintProvider hints, IConflictDetector conflicts, IGameState state)
+    public SudokuService(ISudokuGenerator generator, ISudokuSolver solver, ISudokuValidator validator, IConflictDetector conflicts, IGameState state)
     {
         _generator = generator;
         _solver = solver;
         _validator = validator;
-        _hints = hints;
         _conflicts = conflicts;
         _state = state;
     }
@@ -193,8 +191,6 @@ public sealed class SudokuService
         return false;
     }
 
-    public (Position pos, int value)? Hint() => _hints.GetNextHint(Current);
-
     public (Position pos, int value)? GetHintForSelectedCell()
     {
         if (Selected is null) return null;
@@ -235,19 +231,6 @@ public sealed class SudokuService
                 bare.Cells[r, c].Set(board.Get(r, c), given: true);
         }
         return bare;
-    }
-
-    public void ApplyHint()
-    {
-        var h = _hints.GetNextHint(Current);
-        if (h is null) return;
-        var (pos, value) = h.Value;
-        // Do not overwrite given cells
-        var targetCell = Current.Cells[pos.Row, pos.Col];
-        if (targetCell.IsGiven) return;
-        Snapshot();
-        Current.Set(pos.Row, pos.Col, value);
-        RemoveNoteFromPeers(pos.Row, pos.Col, value);
     }
 
     public void ApplyHintForSelectedCell()
