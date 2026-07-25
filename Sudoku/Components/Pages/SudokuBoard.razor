@@ -40,7 +40,9 @@
          aria-activedescendant="@ActiveDescendant"
          @key="Session.BoardVersion"
          @onkeydown="HandleGridKeyDown"
-         @onmouseleave="EndDrag">
+         @onmouseleave="EndDrag"
+         @onpointerup="EndDrag"
+         @onpointercancel="EndDrag">
         @for (var row = 0; row < 9; row++)
         {
             var r = row;
@@ -153,7 +155,7 @@
                             <div class="wheel-meta">
                                 <span class="wheel-name">@WheelNames[i]</span>
                                 <label class="chip" title="Pick an exact colour (including black and white)">
-                                    <input type="color" value="@GetWheel(i)" @oninput="@(e => SetWheel(i, e.Value?.ToString()))" />
+                                    <input type="color" value="@GetWheel(i)" @oninput="@(e => SetWheelLive(i, e.Value?.ToString()))" @onchange="@(e => SetWheel(i, e.Value?.ToString()))" />
                                     <span class="chip-color" style="background:@GetWheel(i)"></span>
                                     <span class="chip-hex">@GetWheel(i)</span>
                                     <svg class="chip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m2 22 1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z"/></svg>
@@ -225,6 +227,18 @@
     private static readonly string[] WheelNames = ["Background", "Grid background", "Grid borders", "Grid numbers"];
 
     private string GetWheel(int i) => i switch { 0 => pageBg, 1 => gridBg, 2 => gridBorder, _ => gridNum };
+
+    // Dragging inside the native picker streams an oninput per frame over the
+    // circuit; renders are rate-limited like the hue wheels. The picker's final
+    // value is never dropped: onchange commits it unthrottled when the drag ends.
+    private DateTime lastChipApply = DateTime.MinValue;
+    private void SetWheelLive(int i, string? value)
+    {
+        var now = DateTime.UtcNow;
+        if ((now - lastChipApply).TotalMilliseconds < 40) return;
+        lastChipApply = now;
+        SetWheel(i, value);
+    }
 
     private void SetWheel(int i, string? value)
     {
