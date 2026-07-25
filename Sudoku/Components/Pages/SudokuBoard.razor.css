@@ -455,9 +455,33 @@
 /* Keyboard focus on the grid (single tab stop, arrows move the active cell) */
 .board:focus-visible{outline:3px solid #4b9cff;outline-offset:3px}
 
-/* Status line: timer and notes-mode flag */
-.status{display:flex;gap:14px;align-items:center}
+/* Status line: timer, best time, mistakes and notes-mode flag */
+.status{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
 .status .timer{font-style:normal;font-weight:700;font-variant-numeric:tabular-nums;color:#374151}
 .sudoku-root.dark-mode .status .timer{color:#e5e7eb}
+.status .best{font-style:normal;font-weight:600;font-variant-numeric:tabular-nums;color:#047857}
+.sudoku-root.dark-mode .status .best{color:#34d399}
+.status .mistakes{font-style:normal;font-variant-numeric:tabular-nums}
+.status .mistakes.has-mistakes{color:#b91c1c;font-weight:600}
+.sudoku-root.dark-mode .status .mistakes.has-mistakes{color:#f87171}
 .status .notes-flag{color:#b45309;font-weight:600;font-style:normal}
 .sudoku-root.dark-mode .status .notes-flag{color:#fbbf24}
+
+/* Win banner: time, record status and mistakes */
+.win-stats{
+    display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+    font-size:16px;font-weight:700;color:#065f46;
+    background:linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    border-radius:10px;padding:10px 16px;
+    box-shadow:0 0 12px rgba(52,211,153,0.5);
+}
+.win-stats .new-best{
+    color:#92400e;
+    background:linear-gradient(135deg, #fde68a 0%, #fbbf24 100%);
+    border-radius:6px;padding:2px 8px;
+    animation:selpulse 1.2s ease-in-out infinite;
+}
+.sudoku-root.dark-mode .win-stats{
+    color:#a7f3d0;
+    background:linear-gradient(135deg, rgba(6,95,70,0.6) 0%, rgba(4,120,87,0.6) 100%);
+}

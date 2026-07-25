@@ -115,12 +115,37 @@
 
     <div class="status">
         <span class="timer" role="timer" aria-label="Elapsed time">@TimeDisplay</span>
+        @if (bestTime is TimeSpan best)
+        {
+            <span class="best" title="Fastest solve at this difficulty">Best: @Format(best)</span>
+        }
+        <span class="mistakes @(Sudoku.Mistakes > 0 ? "has-mistakes" : "")">Mistakes: @Sudoku.Mistakes</span>
         <span>Selected: @(Sudoku.Selected is Position sp ? $"({sp.Row + 1},{sp.Col + 1})" : "none")</span>
         @if (Sudoku.NotesMode)
         {
             <span class="notes-flag">Notes mode</span>
         }
     </div>
+
+    @if (isSolved)
+    {
+        <div class="win-stats" role="status">
+            Solved in @TimeDisplay
+            @if (newBest)
+            {
+                <span class="new-best">New best time!</span>
+            }
+            else if (usedAutoSolve)
+            {
+                <span>(auto-solve does not count for records)</span>
+            }
+            else if (bestTime is TimeSpan b)
+            {
+                <span>(best: @Format(b))</span>
+            }
+            <span>&middot; Mistakes: @Sudoku.Mistakes</span>
+        </div>
+    }
 
     @if (message is not null && !isSolved)
     {
@@ -169,8 +194,12 @@
     private DateTime startedUtc = DateTime.UtcNow;
     private TimeSpan elapsed;
     private int clockTicks;
+    private TimeSpan? bestTime;
+    private bool newBest;
+    private bool usedAutoSolve;
 
-    private string TimeDisplay => $"{(int)elapsed.TotalMinutes:00}:{elapsed.Seconds:00}";
+    private string TimeDisplay => Format(elapsed);
+    private static string Format(TimeSpan t) => $"{(int)t.TotalMinutes:00}:{t.Seconds:00}";
     private string? ActiveDescendant => Sudoku.Selected is Position p ? CellId(p.Row, p.Col) : null;
     private static string CellId(int r, int c) => $"cell-{r}-{c}";
 
@@ -199,6 +228,7 @@
         var saved = await Storage.LoadGameAsync();
         if (saved is not null && TryRestore(saved))
         {
+            await LoadBestAsync(currentDifficulty);
             StateHasChanged();
             return;
         }
@@ -214,7 +244,7 @@
             // ToBoard throws on malformed data; stored state is outside our
             // control, so any failure just means "no saved game".
             var board = saved.ToBoard();
-            Sudoku.Restore(board);
+            Sudoku.Restore(board, saved.Mistakes);
             currentDifficulty = saved.Difficulty;
             elapsed = TimeSpan.FromSeconds(Math.Max(0, saved.ElapsedSeconds));
             startedUtc = DateTime.UtcNow - elapsed;
@@ -231,7 +261,7 @@
 
     private Task PersistAsync() => isSolved
         ? Storage.ClearGameAsync()
-        : Storage.SaveGameAsync(GameSnapshot.Capture(Sudoku.Current, elapsed, currentDifficulty));
+        : Storage.SaveGameAsync(GameSnapshot.Capture(Sudoku.Current, elapsed, currentDifficulty, Sudoku.Mistakes));
 
     private void OnThemeChanged()
     {
@@ -259,8 +289,17 @@
         boardKey++;
         startedUtc = DateTime.UtcNow;
         elapsed = TimeSpan.Zero;
+        newBest = false;
+        usedAutoSolve = false;
         message = $"New {d} puzzle generated.";
         await PersistAsync();
+        await LoadBestAsync(d);
+    }
+
+    private async Task LoadBestAsync(Difficulty d)
+    {
+        var seconds = await Storage.LoadBestSecondsAsync(d);
+        bestTime = seconds is int s ? TimeSpan.FromSeconds(s) : null;
     }
 
     void HandleClick(int r, int c)
@@ -351,6 +390,15 @@
         isSolved = true;
         message = null;
         fireworks = BuildFireworks();
+        elapsed = DateTime.UtcNow - startedUtc;
+
+        // Auto-solved games never set records - the record belongs to the player.
+        if (!usedAutoSolve && (bestTime is null || elapsed < bestTime))
+        {
+            newBest = true;
+            bestTime = elapsed;
+            _ = Storage.SaveBestSecondsAsync(currentDifficulty, (int)elapsed.TotalSeconds);
+        }
     }
 
     void ApplyHint()
@@ -386,6 +434,7 @@
 
     void Solve()
     {
+        usedAutoSolve = true;
         bool solved = Sudoku.Solve();
         if (solved)
         {

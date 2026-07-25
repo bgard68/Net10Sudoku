@@ -13,8 +13,9 @@ public sealed record GameSnapshot
     public required int[] NoteMasks { get; init; } // 81 bitmasks, bit v = note v
     public int ElapsedSeconds { get; init; }
     public Difficulty Difficulty { get; init; }
+    public int Mistakes { get; init; }
 
-    public static GameSnapshot Capture(Board board, TimeSpan elapsed, Difficulty difficulty)
+    public static GameSnapshot Capture(Board board, TimeSpan elapsed, Difficulty difficulty, int mistakes = 0)
     {
         var values = new int[81];
         var givens = new bool[81];
@@ -39,7 +40,8 @@ public sealed record GameSnapshot
             Solution = solution,
             NoteMasks = notes,
             ElapsedSeconds = (int)elapsed.TotalSeconds,
-            Difficulty = difficulty
+            Difficulty = difficulty,
+            Mistakes = mistakes
         };
     }
 

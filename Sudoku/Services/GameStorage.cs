@@ -40,6 +40,27 @@ public sealed class GameStorage
         catch { /* best effort */ }
     }
 
+    public async Task<int?> LoadBestSecondsAsync(Difficulty difficulty)
+    {
+        try
+        {
+            var result = await _storage.GetAsync<int>(BestKey(difficulty));
+            return result.Success ? result.Value : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public async Task SaveBestSecondsAsync(Difficulty difficulty, int seconds)
+    {
+        try { await _storage.SetAsync(BestKey(difficulty), seconds); }
+        catch { /* best effort */ }
+    }
+
+    private static string BestKey(Difficulty difficulty) => $"sudoku.best.{difficulty}";
+
     public async Task<bool?> LoadDarkModeAsync()
     {
         try

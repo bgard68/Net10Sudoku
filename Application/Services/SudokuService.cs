@@ -24,6 +24,10 @@ public sealed class SudokuService
     // When on, number entry toggles pencil marks instead of placing values.
     public bool NotesMode { get; private set; }
 
+    // Wrong placements this game. Undo deliberately does not forgive them -
+    // the mistake happened, taking it back doesn't unhappen it.
+    public int Mistakes { get; private set; }
+
     public bool CanUndo => _undo.Count > 0;
     public bool CanRedo => _redo.Count > 0;
 
@@ -56,16 +60,18 @@ public sealed class SudokuService
     private void StartFresh()
     {
         Selected = null;
+        Mistakes = 0;
         _undo.Clear();
         _redo.Clear();
     }
 
     // Adopt a board restored from persisted state (e.g. after a page refresh).
     // History intentionally starts empty - undo cannot reach past the reload.
-    public void Restore(Board board)
+    public void Restore(Board board, int mistakes = 0)
     {
         Current = board;
         StartFresh();
+        Mistakes = Math.Max(0, mistakes);
     }
 
     public void ClearSelection() => Selected = null;
@@ -93,6 +99,11 @@ public sealed class SudokuService
         Snapshot();
         cell.Set(value);
         RemoveNoteFromPeers(r, c, value);
+
+        // Only judged when the answer is known; hand-built boards without a
+        // recorded solution never count mistakes.
+        if (Current.SolutionAt(r, c) is int correct && value != correct)
+            Mistakes++;
     }
 
     public void Clear()

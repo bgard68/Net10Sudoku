@@ -21,7 +21,10 @@ not just by how many clues were removed.
   placing a real value sweeps that digit's notes from the row, column and box
 - **Undo / redo** - every action snapshots the whole board, so a placement
   that swept peers' notes reverts atomically
-- **Timer** - elapsed time per puzzle in the status bar
+- **Timer and best times** - elapsed time per puzzle, with your fastest solve
+  per difficulty remembered in the browser (auto-solve never sets records)
+- **Mistake counter** - wrong entries are counted against the known solution;
+  undo does not forgive them
 - **Real-time conflict detection** - duplicates in a row, column or box are
   highlighted as you play
 - **Validate / Solve / Clear All** - check progress, fill the solution, or
