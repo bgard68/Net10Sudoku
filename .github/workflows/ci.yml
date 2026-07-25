@@ -31,3 +31,22 @@ jobs:
 
       - name: Test
         run: dotnet test --configuration Release --no-build --verbosity normal
+
+  smoke-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      # Boots the built app and exercises its HTTP surface end to end,
+      # including failure conditions - the class of hosting/config breakage
+      # unit tests cannot see.
+      - name: HTTP smoke test
+        shell: pwsh
+        run: ./tools/smoke-test.ps1 -StartServer
