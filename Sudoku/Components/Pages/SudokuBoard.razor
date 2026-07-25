@@ -1,6 +1,5 @@
 @page "/"
 @using Sudoku.Application.Services
-@using Sudoku.Application.Interfaces
 @using Sudoku.Application.Models
 @using Sudoku.Domain
 @using Sudoku.Services
@@ -55,7 +54,7 @@
             var blockCol = (sel.Col / 3) * 3;
             var topPx = blockRow * 52 + blockRow; // add 1px per preceding row border
             var leftPx = blockCol * 52 + blockCol;
-            <div class="block-overlay" style="top:@topPx}px;left:@leftPx}px;"></div>
+            <div class="block-overlay" style="top:@(topPx)px;left:@(leftPx)px;"></div>
         }
     </div>
 
@@ -93,31 +92,22 @@
     @if (isSolved)
     {
         <div class="starbursts-container">
-            @* Generate 25 firework starbursts at random positions *@
-            @for (int i = 0; i < 25; i++)
+            @* Laid out once in BuildFireworks(); randomising here would reshuffle
+               every particle on each re-render and defeat the diff. *@
+            @foreach (var burst in fireworks)
             {
-                var x = Random.Shared.Next(10, 90);
-                var y = Random.Shared.Next(15, 85);
-                var color = GetRandomColor();
-                var delay = Random.Shared.Next(0, 2500);
-                
-                <div class="starburst" 
-                     style="left: @(x)%; 
-                            top: @(y)%; 
-                            animation-delay: @(delay)ms;">
-                    
-                    @* Create 20 particles radiating outward *@
-                    @for (int p = 0; p < 20; p++)
+                <div class="starburst"
+                     style="left: @(burst.X)%;
+                            top: @(burst.Y)%;
+                            animation-delay: @(burst.Delay)ms;">
+
+                    @foreach (var particle in burst.Particles)
                     {
-                        var angle = p * 18.0; // 360/20 = 18 degrees
-                        var distance = Random.Shared.Next(50, 90);
-                        var particleDelay = delay + Random.Shared.Next(0, 200);
-                        
-                        <div class="particle" 
-                             style="--angle: @(angle)deg; 
-                                    --distance: @(distance)px;
-                                    background: @color;
-                                    animation-delay: @(particleDelay)ms;"></div>
+                        <div class="particle"
+                             style="--angle: @(particle.Angle)deg;
+                                    --distance: @(particle.Distance)px;
+                                    background: @burst.Color;
+                                    animation-delay: @(particle.Delay)ms;"></div>
                     }
                 </div>
             }
@@ -126,12 +116,14 @@
 </div>
 
 @code {
-    [Inject] public ISudokuValidator Validator { get; set; } = default!;
+    private sealed record Particle(double Angle, int Distance, int Delay);
+    private sealed record Starburst(int X, int Y, int Delay, string Color, IReadOnlyList<Particle> Particles);
 
     private bool isDragging;
     private string? message;
     private int boardKey = 0;
     private bool isSolved = false;
+    private IReadOnlyList<Starburst> fireworks = Array.Empty<Starburst>();
 
     protected override void OnInitialized()
     {
@@ -209,8 +201,7 @@
         bool isValid = Sudoku.Validate();
         if (isValid && Sudoku.IsComplete())
         {
-            isSolved = true;
-            message = null;
+            MarkSolved();
         }
         else
         {
@@ -222,9 +213,42 @@
     {
         if (Sudoku.IsComplete())
         {
-            isSolved = true;
-            message = null;
+            MarkSolved();
         }
+    }
+
+    void MarkSolved()
+    {
+        isSolved = true;
+        message = null;
+        fireworks = BuildFireworks();
+    }
+
+    // Positions are fixed here rather than in the markup so that later re-renders
+    // reuse the same 25 bursts instead of generating a fresh set each time.
+    static IReadOnlyList<Starburst> BuildFireworks()
+    {
+        var bursts = new List<Starburst>(25);
+        for (int i = 0; i < 25; i++)
+        {
+            var delay = Random.Shared.Next(0, 2500);
+            var particles = new List<Particle>(20);
+            for (int p = 0; p < 20; p++)
+            {
+                particles.Add(new Particle(
+                    Angle: p * 18.0, // 360/20 = 18 degrees
+                    Distance: Random.Shared.Next(50, 90),
+                    Delay: delay + Random.Shared.Next(0, 200)));
+            }
+
+            bursts.Add(new Starburst(
+                X: Random.Shared.Next(10, 90),
+                Y: Random.Shared.Next(15, 85),
+                Delay: delay,
+                Color: GetRandomColor(),
+                Particles: particles));
+        }
+        return bursts;
     }
 
     void ApplyHint()
@@ -262,8 +286,7 @@
         bool solved = Sudoku.Solve();
         if (solved)
         {
-            isSolved = true;
-            message = null;
+            MarkSolved();
         }
         else
         {
@@ -327,7 +350,7 @@
         return $"cell{(cell.IsGiven ? " given" : "")}{(isSelected ? " selected" : "")}{(sameRow ? " rowhl" : "")}{(sameCol ? " colhl" : "")}{(sameBlock ? " blockhl" : "")}{(sameValue ? " valhl" : "")}{(hasConflict ? " conflict" : "")}{borderClasses}";
     }
 
-    string GetRandomColor()
+    static string GetRandomColor()
     {
         var colors = new[] { "#ff0080", "#00ffff", "#ffff00", "#ff00ff", "#00ff00", "#ff8800", "#0088ff", "#ff0000", "#8800ff", "#ff69b4", "#00fa9a", "#ffd700", "#ff1493", "#7fff00" };
         return colors[Random.Shared.Next(colors.Length)];
