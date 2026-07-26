@@ -1,0 +1,75 @@
+name: Cleanup old workflow runs
+
+# Deletes old GitHub Actions runs so the Actions history stays tidy — the
+# every-10-minute keep-warm job piles up fast. Keeps the most recent completed
+# runs of EACH workflow (KEEP per workflow) and deletes the rest. In-progress
+# runs are never touched.
+#
+# Runs daily and can be triggered by hand; a manual run takes an optional "keep"
+# input to retain more (or fewer) than the default for that one run.
+
+on:
+  schedule:
+    - cron: '0 6 * * *'        # daily at 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      keep:
+        description: 'How many recent runs to keep per workflow'
+        required: false
+        default: '10'
+
+# Deleting runs needs actions: write; nothing else is granted.
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: cleanup-runs
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      KEEP: ${{ github.event.inputs.keep || '10' }}
+    steps:
+      - name: Delete old runs, keeping the most recent per workflow
+        run: |
+          set -euo pipefail
+          repo="${{ github.repository }}"
+          echo "Repo: $repo   Keeping $KEEP most-recent completed run(s) per workflow"
+
+          # Every workflow in the repo (includes disabled ones).
+          workflow_ids=$(gh api --paginate "repos/$repo/actions/workflows" --jq '.workflows[].id')
+
+          total_deleted=0
+          for wf in $workflow_ids; do
+            name=$(gh api "repos/$repo/actions/workflows/$wf" --jq '.name')
+            echo "::group::$name (id $wf)"
+
+            # Completed runs, newest-first (the API's default order). --paginate keeps
+            # that order across pages, so a simple counter is enough — no re-sorting.
+            run_ids=$(gh api --paginate \
+              "repos/$repo/actions/workflows/$wf/runs?status=completed&per_page=100" \
+              --jq '.workflow_runs[].id')
+
+            count=0
+            for run in $run_ids; do
+              count=$((count + 1))
+              if [ "$count" -le "$KEEP" ]; then
+                echo "keep    run $run"
+                continue
+              fi
+              if gh api -X DELETE "repos/$repo/actions/runs/$run" >/dev/null 2>&1; then
+                echo "deleted run $run"
+                total_deleted=$((total_deleted + 1))
+              else
+                echo "skip    run $run (could not delete)"
+              fi
+            done
+            echo "::endgroup::"
+          done
+
+          echo "Done. Deleted $total_deleted run(s)."
