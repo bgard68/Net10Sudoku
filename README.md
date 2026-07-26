@@ -5,6 +5,14 @@ Architecture. Every puzzle is verified to have exactly one solution, and
 difficulty is graded by the solving techniques a puzzle actually requires -
 not just by how many clues were removed.
 
+## Demo
+
+<p align="center">
+  <img src="docs/media/net10sudoku-demo.gif" alt="Net10Sudoku gameplay demo" width="820">
+</p>
+
+**[▶ Full 60-second showcase](docs/media/net10sudoku-showcase.mp4)**  ·  **[Play it live](https://blazor-sudoku-net10.azurewebsites.net)**
+
 ## Documentation
 
 | Document | What it covers |
