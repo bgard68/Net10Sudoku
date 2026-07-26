@@ -1,0 +1,122 @@
+name: Deploy to Azure
+
+# Publishes the Blazor Server app to an Azure App Service (Free F1) web app.
+#
+# Authentication is OIDC only: the workflow requests a short-lived federated
+# token from GitHub at run time and exchanges it with Microsoft Entra ID. There
+# is NO publish profile, NO AZURE_CREDENTIALS blob and NO long-lived secret of
+# any kind stored in the repo or in GitHub. The only values GitHub holds are
+# three non-sensitive identifiers (client / tenant / subscription IDs) that are
+# useless without the federated-credential trust configured on the Azure side.
+#
+# Setup (one time): see docs/deployment.md.
+
+on:
+  push:
+    branches: [main]
+    # Docs-only changes never touch the deployed app, so skip them.
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - '.github/dependabot.yml'
+  workflow_dispatch: {}
+
+# Least privilege at the top level; the deploy job elevates only id-token.
+permissions:
+  contents: read
+
+# Never let two deploys race; a newer push supersedes an in-flight one.
+concurrency:
+  group: deploy-azure
+  cancel-in-progress: false
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  PROJECT: Sudoku/Sudoku.csproj
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      # Gate the deploy on the same tests CI runs, so main can never ship red.
+      - name: Test
+        run: dotnet test --configuration Release --no-build --verbosity normal
+
+      - name: Publish
+        run: dotnet publish ${{ env.PROJECT }} --configuration Release --no-build --output ${{ github.workspace }}/publish
+
+      # Fail fast if publish did not produce a runnable app. The entry assembly
+      # (Sudoku.dll) must sit at the package ROOT — that is what unzips to
+      # /home/site/wwwroot and what App Service starts. If it is missing, the
+      # deploy would populate the web root with the wrong thing and boot-loop.
+      - name: Verify publish output
+        run: |
+          root="${{ github.workspace }}/publish"
+          if [ ! -f "$root/Sudoku.dll" ] || [ ! -f "$root/Sudoku.runtimeconfig.json" ]; then
+            echo "::error title=Publish check failed::Sudoku.dll / runtimeconfig not at publish root — refusing to deploy."
+            ls -la "$root" || true
+            exit 1
+          fi
+          echo "Publish OK — entry assembly present, $(ls -1 "$root" | wc -l) entries at root."
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app
+          path: ${{ github.workspace }}/publish
+          if-no-files-found: error
+          retention-days: 1
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # 'production' lets you add required reviewers / branch limits in repo
+    # settings later without touching this file. Safe to leave as-is.
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.webapp-url }}
+    permissions:
+      contents: read
+      id-token: write        # required for the OIDC federated token
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app
+          path: publish
+
+      - name: Azure login (OIDC — no stored credential)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to App Service
+        id: deploy
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
+          package: publish
+
+      - name: Sign out
+        if: always()
+        run: az logout || true

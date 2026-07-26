@@ -59,7 +59,9 @@ sensitive belongs in either.
 
 ## Azure deployment
 
-Not yet established. When it is, the rules that keep the above true:
+Established — see the step-by-step [deployment guide](deployment.md) (Free F1,
+GitHub Actions). The rules that keep the above true, and that the guide
+implements:
 
 - **Authenticate with OIDC**, not a stored credential. `azure/login` with a
   federated credential needs `permissions: id-token: write` on the deploy job

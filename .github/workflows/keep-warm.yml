@@ -1,0 +1,51 @@
+name: Keep the app warm
+
+# Pings the app on a schedule so the Free (F1) App Service instance does not
+# unload between visits and cold-start the next visitor. This app has no
+# database - there is nothing to wake but the web server - so it simply requests
+# the root page over HTTPS.
+#
+# Setup: set the repo Variable APP_URL to the site root, e.g.
+#   https://net10sudoku-bgard.azurewebsites.net
+# (Settings > Secrets and variables > Actions > Variables). azure-provision.ps1
+# sets this for you. Until it is set, this workflow no-ops instead of failing.
+#
+# Notes:
+#   - GitHub throttles/delays scheduled runs under load, so ~10 min is "roughly".
+#   - Scheduled workflows are disabled after 60 days with no repo activity.
+#   - Actions minutes are unlimited on PUBLIC repos; on a private repo this
+#     counts against the monthly quota - widen the interval or disable it there.
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'   # roughly every 10 minutes
+  workflow_dispatch: {}       # allow a manual "wake it now" run
+
+concurrency:
+  group: keep-warm
+  cancel-in-progress: true
+
+permissions: {}               # no repo access needed - it only makes an HTTP call
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping the app root (warms the web server)
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+        run: |
+          if [ -z "$APP_URL" ]; then
+            echo "APP_URL variable is not set - set it to the site root to enable keep-warm. Skipping."
+            exit 0
+          fi
+          url="${APP_URL%/}/"
+          echo "Pinging $url"
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 40 --retry 3 --retry-all-errors "$url" || echo "000")
+          echo "HTTP $code"
+          # Any HTTP response means the instance served the request - goal met.
+          # A total failure (000) is logged but does not fail the schedule.
+          if [ "$code" = "000" ]; then
+            echo "::warning::No response from $url (still waking, or unreachable)."
+          fi

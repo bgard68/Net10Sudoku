@@ -332,6 +332,49 @@ one step.
 check fails, first prove the input landed where you think it did, or you will
 debug the application for a defect in the harness.
 
+## Deployment (Azure, Free F1)
+
+### Free-tier compute quota is per region, and can be zero
+**Bug:** Creating the F1 App Service plan failed with *"Operation cannot be
+completed without additional quota … Current Limit (Total VMs): 0"* in the
+first region tried. Nothing was misconfigured and nothing was billable — the
+subscription simply had a regional vCPU limit of zero there.
+**Fix:** Provision in a region where the subscription has quota (`-Location`);
+a region that already hosts a working App Service is a safe bet. A quota
+increase can also be requested under Portal → Quotas.
+**Lesson:** "Free" does not mean "available everywhere". Compute quota is a
+per-region limit, not a billing state, and a subscription can have zero in one
+region while another works. Read the error for the *region*, not just the number.
+
+### A resource group's location cannot change, so an idempotent re-run broke
+**Bug:** After switching regions on the retry, provisioning died at step 1 with
+`InvalidResourceGroupLocation: The Resource group already exists in location
+'<old-region>'`. The script called `az group create` with the new `-Location`
+unconditionally, and Azure rejects a location change on an existing group.
+**Fix:** Check first (`az group exists`) and reuse an existing group as-is; only
+create when it is genuinely absent. To actually move regions, delete the empty
+group first.
+**Lesson:** Idempotency is not "call create again". A resource with an immutable
+property — a group's location — makes a blind re-create a hard error; a
+re-runnable script has to detect existence and skip, not re-assert.
+
+### An existence check built on a command that errors when absent
+**Bug:** The script probed for the web app with `az webapp show`, which *errors*
+when the app does not exist yet — which is exactly the first-run case. Under
+PowerShell 7.4 defaults (`$PSNativeCommandUseErrorActionPreference` is `$true`)
+together with `$ErrorActionPreference = 'Stop'`, that native error became
+terminating and aborted the whole run mid-provision — even with the command's
+stderr redirected to `$null`.
+**Fix:** Probe with `az … list --query "[?name=='…']"`, which returns an empty
+string instead of erroring, matching every other existence check in the script;
+and set `$ErrorActionPreference = 'Continue'` with
+`$PSNativeCommandUseErrorActionPreference = $false`, gating real failures on
+`$LASTEXITCODE` explicitly.
+**Lesson:** Don't build an existence check on a command whose "not found" is an
+error — prefer a query that returns empty. And PowerShell 7.4 changed native
+error handling: a non-zero exit now throws under `Stop` by default, so a script
+that shells out must choose its error mode deliberately, not inherit it.
+
 See also: [architecture review](architecture-review.md) ·
 [testing](testing.md)
 
