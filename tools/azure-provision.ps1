@@ -26,10 +26,10 @@
     the role assignment in step 4.
 
 .EXAMPLE
-  ./tools/azure-provision.ps1 -AppName net10sudoku-bgard
+  ./tools/azure-provision.ps1 -AppName myapp-web
 
 .EXAMPLE
-  ./tools/azure-provision.ps1 -AppName net10sudoku-bgard -Location westus2 -SkipGitHub
+  ./tools/azure-provision.ps1 -AppName myapp-web -Location westus2 -SkipGitHub
 #>
 [CmdletBinding()]
 param(
@@ -37,10 +37,16 @@ param(
     [ValidatePattern('^[a-z0-9][a-z0-9-]{1,58}[a-z0-9]$')]
     [string]$AppName,
 
-    [string]$ResourceGroup = 'rg-net10sudoku',
-    [string]$Location      = 'eastus',
-    [string]$PlanName      = 'plan-net10sudoku-free',
-    [string]$GitHubRepo    = 'bgard68/Net10Sudoku',
+    # Omit these and they are auto-detected / derived (see "Resolve inputs" below):
+    #   GitHubRepo     <- the current repo's git remote (via gh, then git)
+    #   ResourceGroup  <- "rg-<repo-name>"
+    #   PlanName       <- "plan-<repo-name>-free"
+    #   Location       <- an existing resource group's region, else the value here
+    #   SubscriptionId <- whatever `az` is currently logged in to
+    [string]$GitHubRepo,
+    [string]$ResourceGroup,
+    [string]$PlanName,
+    [string]$Location = 'centralus',   # fallback region, used only when the group is new
     [string]$SubscriptionId,
 
     [switch]$SkipGitHub,
@@ -88,14 +94,36 @@ if (-not $SkipGitHub) {
     if ($LASTEXITCODE -ne 0) { throw "GitHub CLI is not logged in. Run 'gh auth login', or pass -SkipGitHub." }
 }
 
+# --- Resolve inputs: auto-detect / derive anything not passed ---------------
+if (-not $GitHubRepo) {
+    # Prefer gh (it knows the repo's default remote); fall back to the git remote.
+    $GitHubRepo = gh repo view --json nameWithOwner -q .nameWithOwner 2>$null
+    if (-not $GitHubRepo) {
+        $remote = git remote get-url origin 2>$null
+        if ($remote) {
+            $GitHubRepo = (($remote -replace '^.*github\.com[:/]', '') -replace '\.git$', '') -replace '/$', ''
+        }
+    }
+    if ($GitHubRepo -notmatch '^[^/]+/[^/]+$') {
+        throw "Could not detect the GitHub repo. Run from inside the repo, or pass -GitHubRepo <owner/repo>."
+    }
+    Write-Host "    Repo (detected): $GitHubRepo"
+}
+# Derive the resource names from the repo name unless the caller set them.
+$project = (($GitHubRepo -split '/')[-1]).ToLowerInvariant() -replace '[^a-z0-9-]', ''
+if (-not $ResourceGroup) { $ResourceGroup = "rg-$project" }
+if (-not $PlanName)      { $PlanName      = "plan-$project-free" }
+Write-Host "    RG: $ResourceGroup   Plan: $PlanName"
+
 # --------------------------------------------------------------------------
-Write-Host "==> 1/6 Resource group '$ResourceGroup' ($Location)" -ForegroundColor Cyan
-# Reuse an existing group as-is. A group's location cannot change, so calling
-# 'az group create' with a different -Location than an existing group errors;
-# check first and only create when it is genuinely missing.
+Write-Host "==> 1/6 Resource group '$ResourceGroup'" -ForegroundColor Cyan
+# Reuse an existing group and adopt its region (a group's location is immutable,
+# so we never try to recreate or move it); only create when it is truly missing.
 if ((az group exists --name $ResourceGroup) -eq 'true') {
-    Write-Host '    already exists, reusing (its current location is kept)'
+    $Location = az group show --name $ResourceGroup --query location -o tsv
+    Write-Host "    already exists in '$Location', reusing"
 } else {
+    Write-Host "    creating in '$Location'"
     az group create --name $ResourceGroup --location $Location -o none
     Assert-LastExit 'create resource group'
 }
@@ -173,7 +201,7 @@ if (-not $spId) {
 # Federated credential. The subject MUST match how deploy.yml runs: the deploy
 # job pins 'environment: production', so the subject is the environment form
 # below - NOT a branch ref. This is the most common setup mistake.
-$fcName    = 'gh-net10sudoku-production'
+$fcName    = "gh-$project-production"
 $fcSubject = "repo:${GitHubRepo}:environment:production"
 $fcExists  = az ad app federated-credential list --id $AppId --query "[?name=='$fcName'] | [0].name" -o tsv
 if (-not $fcExists) {

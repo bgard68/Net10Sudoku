@@ -48,7 +48,7 @@ From a local PowerShell in the repo root, signed in to both CLIs (see
 Prerequisites above):
 
 ```powershell
-.\tools\azure-provision.ps1 -AppName <app-name> -Location <region>
+.\tools\azure-provision.ps1 -AppName <app-name>
 ```
 
 `<app-name>` must be **globally unique** — it becomes
@@ -62,10 +62,16 @@ az rest --method post `
   --body '{\"name\":\"<app-name>\",\"type\":\"Microsoft.Web/sites\"}'
 ```
 
-Useful flags: `-ResourceGroup` (default `rg-net10sudoku`), `-Location` (default
-`eastus`), `-SubscriptionId`, `-SkipGitHub` (do the Azure side and print the IDs
-instead of setting them), `-SkipPushProtection`. When it finishes it prints the
-app URL; confirm the GitHub side with `gh secret list` and `gh variable list`.
+With just `-AppName`, the script auto-detects the rest: the **GitHub repo** from
+this repo's git remote (via `gh`, then `git`), the **resource group**
+(`rg-<repo>`) and **plan** (`plan-<repo>-free`) derived from the repo name, the
+**location** adopted from the resource group if it already exists (otherwise
+`centralus`), and the **subscription** from your `az` login. Override any of
+them explicitly when you want: `-GitHubRepo owner/repo`, `-ResourceGroup <name>`,
+`-PlanName <name>`, `-Location <region>`, `-SubscriptionId <id>`. Other flags:
+`-SkipGitHub` (do the Azure side and print the IDs instead of setting them) and
+`-SkipPushProtection`. When it finishes it prints the app URL; confirm the
+GitHub side with `gh secret list` and `gh variable list`.
 
 ### Choose a region that has Free-tier quota
 
@@ -77,22 +83,25 @@ where the subscription has quota (a region that already hosts a working App
 Service is a safe bet), or request an increase under Portal → **Quotas**. A
 resource group's location cannot change after creation, so if you switch regions
 on a re-run, delete the empty group first
-(`az group delete --name rg-net10sudoku --yes`) — otherwise the script reuses
-the group in its original location.
+(`az group delete --name <resource-group> --yes`) — otherwise the script adopts
+the group's existing location.
 
 ## Doing it by hand (what the script automates)
 
-If you would rather run each step yourself, these are the exact commands the
-script issues. Run them from any shell. Edit the five variables at the top; set
-`LOCATION` to a region with F1 quota (see the note above), and `APP` must be
-**globally unique** because it becomes `https://<APP>.azurewebsites.net`.
+If you would rather run each step yourself, these are the same steps the script
+performs. Run them from any shell. Fill in the four values at the top
+(`GH_REPO`, `NAME`, `APP`, `LOCATION`); `RG` and `PLAN` derive from `NAME`,
+mirroring the script. Set `LOCATION` to a region with F1 quota (see the note
+above), and `APP` must be **globally unique** — it becomes
+`https://<APP>.azurewebsites.net`.
 
 ```bash
-RG=rg-net10sudoku
-LOCATION=centralus                  # a region where your subscription has F1 quota
-PLAN=plan-net10sudoku-free
-APP=<app-name>                      # globally unique
-GH_REPO=bgard68/Net10Sudoku
+GH_REPO=<owner>/<repo>              # your repo, e.g. your-name/your-repo
+NAME=<project>                      # short slug for resource names, e.g. myapp
+APP=<app-name>                      # globally unique -> https://<app-name>.azurewebsites.net
+LOCATION=<region>                   # a region where your subscription has F1 quota
+RG=rg-$NAME
+PLAN=plan-$NAME-free
 ```
 
 ### 1. Create the Free-tier web app
@@ -158,7 +167,7 @@ so a malformed package can never reach the site.
 
 ```bash
 # App registration GitHub will act as (no client secret is ever created).
-APP_ID=$(az ad app create --display-name "gh-net10sudoku-deploy" --query appId -o tsv)
+APP_ID=$(az ad app create --display-name "gh-$NAME-deploy" --query appId -o tsv)
 az ad sp create --id "$APP_ID"
 
 # Federated credential: trust tokens from this repo's 'production' environment.
@@ -166,7 +175,7 @@ az ad sp create --id "$APP_ID"
 # 'environment: production', so the OIDC subject is the environment form below
 # (NOT a branch ref) — this is the single most common setup mistake.
 az ad app federated-credential create --id "$APP_ID" --parameters "{
-  \"name\": \"gh-net10sudoku-production\",
+  \"name\": \"gh-$NAME-production\",
   \"issuer\": \"https://token.actions.githubusercontent.com\",
   \"subject\": \"repo:${GH_REPO}:environment:production\",
   \"audiences\": [\"api://AzureADTokenExchange\"]
