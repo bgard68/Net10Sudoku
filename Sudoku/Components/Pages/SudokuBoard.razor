@@ -88,6 +88,9 @@
         </button>
         @if (customizeOpen)
         {
+            <div class="customize-backdrop" @onclick="(() => customizeOpen = false)"></div>
+            <div class="customize-panel">
+            <button class="popover-close" @onclick="(() => customizeOpen = false)" aria-label="Close colour picker">&#10005;</button>
             <div class="customize-hint">Drag a ring for a hue, or click a colour chip for the full picker (any colour, black and white).</div>
             <div class="wheel-list">
                 @for (int w = 0; w < 4; w++)
@@ -117,6 +120,7 @@
                 }
             </div>
             <button class="linkbtn reset-colors" @onclick="ResetColors">Reset to defaults</button>
+            </div>
         }
     </div>
     </div>
@@ -141,12 +145,17 @@
                 <span>Notes</span>
                 <span class="mini-switch @(Sudoku.NotesMode ? "on" : "")" aria-hidden="true"><span class="knob"></span></span>
             </button>
+            <button class="tile colors" disabled="@Session.IsGenerating" @onclick="(() => customizeOpen = !customizeOpen)" title="Customize colors" aria-pressed="@(customizeOpen ? "true" : "false")">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.289-.289-.438-.652-.438-1.125 0-.918.746-1.668 1.668-1.668h1.996c3.051 0 5.563-2.512 5.563-5.563C22 6.012 17.5 2 12 2z"/></svg>
+                <span>Colors</span>
+            </button>
         </div>
 
         <NumberPad DigitDone="view.DigitDone"
                    Disabled="Session.IsGenerating"
                    OnPlace="Place" />
 
+        <div class="action-buttons">
         <button class="bigbtn validate" disabled="@Session.IsGenerating" @onclick="Validate">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1 1 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
             Validate
@@ -159,6 +168,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></svg>
             Solve
         </button>
+        </div>
 
         <div class="link-row">
             <button class="linkbtn" disabled="@Session.IsGenerating" @onclick="ClearAll">Clear all</button>

@@ -385,3 +385,66 @@
 
 /* Remove solid circles from fanfare */
 .sudoku-root ::deep .starburst::before, .sudoku-root ::deep .starburst::after, .sudoku-root ::deep .particle::before { content:none !important; display:none !important; box-shadow:none !important; animation:none !important; }
+
+/* Wrapper around the three solve buttons; lets mobile lay them in a row. */
+.action-buttons{display:flex;flex-direction:column;gap:10px}
+
+/* Colour-customiser trigger tile + popover chrome are mobile-only; hidden here. */
+.tile.colors{display:none}
+.tile.colors svg{color:#f472b6}
+.customize-backdrop{display:none}
+.popover-close{display:none}
+
+/* ---------- Mobile portrait: fit the board + every control on one screen ----------
+   Below 640px the sidebar collapses and the game owns the viewport. The board is
+   capped by BOTH the available width AND height (via --rsv, the room the rest of the
+   UI needs), so it can never push the controls off-screen. The controls fold into
+   compact rows - four action icons, a single 1-9 keypad row, three solve buttons,
+   then Clear all - so nothing has to scroll. svh keeps the maths honest while the
+   mobile address bar is on screen. Desktop (>=641px) is untouched. */
+@media (max-width: 640px) {
+    .sudoku-root{padding:6px;gap:6px;border-radius:8px}
+    .top-strip{padding:5px 8px;gap:4px 10px}
+    .play-area{gap:6px;width:100%}
+    .board-column{width:100%;align-items:center;gap:6px}
+
+    /* --rsv: vertical space reserved for everything except the board. */
+    .board{--rsv:368px}
+    .cell{
+        box-sizing:border-box;
+        width: clamp(24px, min((100vw - 28px)/9, (100svh - var(--rsv))/9), 52px);
+        height:clamp(24px, min((100vw - 28px)/9, (100svh - var(--rsv))/9), 52px);
+        font-size:clamp(13px, min((100vw - 28px)/9, (100svh - var(--rsv))/9) * 0.42, 22px);
+    }
+    .note{font-size:clamp(6px, min((100vw - 28px)/9, (100svh - var(--rsv))/9) * 0.2, 11px)}
+
+    /* Colour customiser is a popover launched from the Colors tile, so it costs no
+       vertical space in the one-screen layout. */
+    .customize{background:none;border:0;padding:0}
+    .customize-header{display:none}
+    .tile.colors{display:flex}
+    .customize-backdrop{display:block;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50}
+    .customize-panel{
+        position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:51;
+        width:min(360px,92vw);box-sizing:border-box;
+        background:#101014;border:1px solid #2e2e38;border-radius:14px;
+        padding:16px 14px 12px;box-shadow:0 12px 40px rgba(0,0,0,.6);
+    }
+    .popover-close{display:block;position:absolute;top:6px;right:10px;background:none;border:0;color:#94a3b8;font-size:18px;line-height:1;cursor:pointer;padding:2px 6px}
+    .customize-panel .wheel-list{padding-top:6px;gap:10px}
+    .customize-panel .wheel-row{min-width:0;flex:1 1 40%}
+
+    .side-panel{width:100%;box-sizing:border-box;gap:6px;padding:8px}
+    .tile-grid{grid-template-columns:repeat(5,1fr);gap:6px}
+    .tile{padding:5px 0 4px;font-size:11px;gap:3px}
+    .tile svg{width:18px;height:18px}
+
+    .sudoku-root ::deep .keypad{grid-template-columns:repeat(9,1fr);grid-auto-rows:44px;gap:4px}
+    .sudoku-root ::deep .keytile{font-size:16px;border-radius:6px}
+
+    .action-buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+    .bigbtn{padding:7px 0;font-size:12px;gap:5px;white-space:nowrap}
+    .bigbtn svg{width:15px;height:15px}
+
+    .link-row{gap:16px;padding-top:2px}
+}

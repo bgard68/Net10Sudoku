@@ -58,3 +58,16 @@ h1:focus {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+/* Keep Chrome mobile from auto-inflating text (which would distort the grid). */
+html, body {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+/* On phones, reclaim the article's wide side padding so the board gets the room. */
+@media (max-width: 640px) {
+    .content.px-4 {
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+}
