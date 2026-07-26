@@ -120,3 +120,68 @@ jobs:
       - name: Sign out
         if: always()
         run: az logout || true
+
+  # Proves the freshly deployed site actually serves traffic. The deploy job
+  # can go green while the app boot-loops (bad startup command, missing entry
+  # assembly, runtime config drift) — App Service reports the *deployment* as
+  # succeeded, not the *app*. This job hits the real public URL and fails the
+  # whole run if the live site is unhealthy, so a broken release shows up red
+  # instead of silently sitting live.
+  #
+  # It re-runs the exact same HTTP checks CI runs locally, but against the
+  # production URL. No Azure credentials or OIDC token — it only makes public
+  # HTTP requests, so it needs nothing beyond checking out the test script.
+  smoke:
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # Prefer the explicit APP_URL variable the provisioning script sets; fall
+      # back to the conventional <app>.azurewebsites.net host if only the web
+      # app name is configured. Fail loudly if neither is set rather than
+      # smoke-testing a blank URL.
+      - name: Resolve live URL
+        run: |
+          url="${{ vars.APP_URL }}"
+          if [ -z "$url" ]; then
+            name="${{ vars.AZURE_WEBAPP_NAME }}"
+            if [ -z "$name" ]; then
+              echo "::error title=No smoke target::Neither the APP_URL nor AZURE_WEBAPP_NAME repository variable is set."
+              exit 1
+            fi
+            url="https://${name}.azurewebsites.net"
+          fi
+          url="${url%/}"                       # drop any trailing slash
+          echo "LIVE_URL=$url" >> "$GITHUB_ENV"
+          echo "Smoke target: $url"
+
+      # A fresh deploy on the Free (F1) tier cold-starts, so the first requests
+      # can hang or 5xx for up to a minute. Poll GET / until it answers 200
+      # (up to ~5 minutes) before running the checks, so a slow wake-up is not
+      # mistaken for a failed release.
+      - name: Wait for the app to answer (F1 cold start)
+        run: |
+          url="$LIVE_URL"
+          echo "Polling $url/ for readiness..."
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$url/" || echo 000)
+            if [ "$code" = "200" ]; then
+              echo "Ready after attempt $i (HTTP 200)."
+              exit 0
+            fi
+            echo "attempt $i: HTTP $code — waiting 10s"
+            sleep 10
+          done
+          echo "::error title=App never became ready::$url did not return HTTP 200 within ~5 minutes."
+          exit 1
+
+      - name: Run HTTP smoke test against the live site
+        shell: pwsh
+        run: ./tools/smoke-test.ps1 -BaseUrl "$env:LIVE_URL"
