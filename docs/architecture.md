@@ -55,6 +55,26 @@ Because `GameSession` and `SudokuService` depend only on ports, the entire
 game flow is unit-testable with in-memory fakes - no browser, no JS interop,
 no clock.
 
+### Why this pattern for a Sudoku game
+
+A puzzle game looks small enough to skip the ceremony, but three of its parts
+are exactly the kind that pay for a port rather than a hard-wired dependency:
+
+- **The algorithms change.** `SudokuSolver` was rewritten from a naive
+  backtracker to a bitmask + most-constrained-cell search (~45x faster
+  generation); the game flow never noticed, because it only sees
+  `ISudokuSolver`. The old solver still earns its keep as an independent test
+  oracle ([testing](testing.md)).
+- **The store is provisional.** Saves live in encrypted browser storage today,
+  but `IGameStore` means a server-side store is one adapter and one DI line
+  away - no core code moves (see [persistence](#persistence-there-is-no-database)).
+- **The rules must stay pure.** The Domain (`Board`, `Cell`, `Position`) encodes
+  the rules of Sudoku and knows nothing about Blazor, storage or the clock, so
+  its invariants are compiler-enforced and testable in isolation.
+
+That is why the boundary earns its keep here: the same ports that make the core
+swappable are what let the whole test suite run headless in milliseconds.
+
 ## Persistence: there is no database
 
 Nothing is stored server-side and there are no accounts. The `IGameStore`
