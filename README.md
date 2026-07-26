@@ -94,6 +94,6 @@ This project is open source under the [MIT License](LICENSE).
 
 ## Acknowledgments
 
-- Leonhard Euler for Latin squares
-- Howard Garns for inventing modern Sudoku
-- Nikoli for popularizing it in Japan
+- [Leonhard Euler](https://en.wikipedia.org/wiki/Leonhard_Euler) for [Latin squares](https://en.wikipedia.org/wiki/Latin_square)
+- [Howard Garns](https://en.wikipedia.org/wiki/Howard_Garns) for inventing [modern Sudoku](https://en.wikipedia.org/wiki/Sudoku)
+- [Nikoli](https://en.wikipedia.org/wiki/Nikoli_%28publisher%29) for popularizing it in Japan
