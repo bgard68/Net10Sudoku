@@ -8,10 +8,10 @@ not just by how many clues were removed.
 ## Demo
 
 <p align="center">
-  <img src="docs/media/net10sudoku-demo.gif" alt="Net10Sudoku gameplay demo" width="820">
+  <img src="docs/media/net10sudoku_showcase.gif" alt="Net10Sudoku gameplay: a dark cyberpunk-themed Sudoku grid with difficulty tabs, timer and number pad; pencil marks and keyboard cell selection; a completed board celebrating with fireworks" width="820">
 </p>
 
-**[▶ Full 60-second showcase](docs/media/net10sudoku-showcase.mp4)**  ·  **[Play it live](https://blazor-sudoku-net10.azurewebsites.net)**
+**[Play it live](https://blazor-sudoku-net10.azurewebsites.net)**
 
 ## Documentation
 
