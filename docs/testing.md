@@ -7,7 +7,12 @@ a unit test suite that proves the game is *correct*, and an HTTP smoke test
 that proves the app *ships*. They catch different failure classes, and the
 project has real examples of each (see [lessons learned](lessons-learned.md)).
 
-## Unit and integration tests (`Sudoku.Tests`, 103 tests)
+Every past defect is mapped to whatever detects it today in the
+[prevention matrix](lessons-learned.md#what-catches-each-of-these-now) -
+including the handful that are still guarded only by a human following the
+browser-verification procedure below.
+
+## Unit and integration tests (`Sudoku.Tests`, 104 tests)
 
 xUnit tests built over the real service graph rather than mocks, so they
 exercise the shipped wiring. Coverage by area:
@@ -65,6 +70,7 @@ review found - each of which was invisible in a passing build:
 | `Every_referenced_static_asset_exists` | A stylesheet or script reference with no file behind it - the Bootstrap link 404'd on every page load for months |
 | `No_rule_makes_an_element_click_transparent_by_a_generic_class_name` | A bare single-class `pointer-events:none` rule disabling unrelated elements that share the name |
 | `The_pencil_mark_overlay_does_not_share_a_class_with_the_notes_button` | The specific collision that made the Notes button unclickable |
+| `No_source_file_contains_mojibake_from_a_bad_encoding_save` | A Windows-1252 save corrupting non-ASCII text (this happened to the About page). The bytes stay valid UTF-8 afterwards, so decoding cannot catch it - the test looks for the byte-pair signatures the corruption leaves behind. |
 
 Contrast is *not* asserted in these tests: computing it correctly requires
 compositing translucent layers as the browser renders them, which is a browser
@@ -179,7 +185,7 @@ Two independent jobs on every push and PR to `main`:
 
 ```mermaid
 flowchart LR
-    Push["push / pull request"] --> A["build-and-test<br/>restore, Release build,<br/>103 tests"]
+    Push["push / pull request"] --> A["build-and-test<br/>restore, Release build,<br/>104 tests"]
     Push --> B["smoke-test<br/>pwsh tools/smoke-test.ps1 -StartServer<br/>boots the built DLL, 14 HTTP checks"]
 ```
 

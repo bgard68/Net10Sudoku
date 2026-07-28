@@ -107,6 +107,29 @@ public class FrontendPostureTests
             $"sharing that class name: {string.Join(", ", risky)}");
     }
 
+    // A Windows-1252 save once turned every non-ASCII character in About.razor
+    // into mojibake ("3x3" became "3Ã—3"). The bytes are still valid UTF-8 after
+    // that kind of corruption, so decoding cannot detect it - the giveaway is
+    // the specific sequences a UTF-8 pair produces when read as Latin-1.
+    [Fact]
+    public void No_source_file_contains_mojibake_from_a_bad_encoding_save()
+    {
+        // Â followed by punctuation, and the Ã pairs, are the common signatures.
+        var mojibake = new Regex("Â[\\u0080-\\u00BF]|Ã[\\u0080-\\u00BF]|â€[\\u0080-\\u00BF]|ï»¿(?!\\uFEFF)");
+        var offenders = new List<string>();
+
+        foreach (var path in RazorFiles().Concat(CssFiles()))
+        {
+            var text = File.ReadAllText(path);
+            var match = mojibake.Match(text);
+            if (match.Success)
+                offenders.Add($"{Path.GetFileName(path)} at offset {match.Index}: '{match.Value}'");
+        }
+
+        Assert.True(offenders.Count == 0,
+            $"Mojibake - re-save these as UTF-8: {string.Join("; ", offenders)}");
+    }
+
     // Guards the specific collision that shipped: the pencil-mark overlay and
     // the Notes button must not share a class.
     [Fact]
