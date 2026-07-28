@@ -119,6 +119,18 @@
                     </div>
                 }
             </div>
+            @* The wheels can produce a board nobody can read - black numbers on
+               a black grid measures 1.03:1. Warn with the measured ratio rather
+               than silently overriding a deliberate choice, and offer the
+               one-click repair. *@
+            @if (GridContrast < MinReadableContrast)
+            {
+                <div class="contrast-warning" role="status">
+                    <strong>Low contrast</strong>
+                    <span>Numbers read @GridContrast.ToString("0.0"):1 against the grid; @MinReadableContrast:1 is the readable minimum.</span>
+                    <button class="linkbtn" @onclick="FixContrast">Fix automatically</button>
+                </div>
+            }
             <button class="linkbtn reset-colors" @onclick="ResetColors">Reset to defaults</button>
             </div>
         }
@@ -232,6 +244,44 @@
     }
 
     private static readonly string[] WheelNames = ["Background", "Grid background", "Grid borders", "Grid numbers"];
+
+    // WCAG 2.x AA for normal text.
+    private const double MinReadableContrast = 4.5;
+
+    private double GridContrast => ContrastRatio(gridNum, gridBg);
+
+    // Swap the number colour for whichever of black or white reads better on
+    // the chosen grid background - the user's grid colour is left alone.
+    private void FixContrast()
+    {
+        gridNum = ContrastRatio("#ffffff", gridBg) >= ContrastRatio("#000000", gridBg)
+            ? "#ffffff"
+            : "#000000";
+    }
+
+    // WCAG relative luminance and contrast ratio.
+    private static double ContrastRatio(string foreground, string background)
+    {
+        var l1 = RelativeLuminance(foreground);
+        var l2 = RelativeLuminance(background);
+        var (hi, lo) = l1 >= l2 ? (l1, l2) : (l2, l1);
+        return (hi + 0.05) / (lo + 0.05);
+    }
+
+    private static double RelativeLuminance(string hex)
+    {
+        static double Channel(int v)
+        {
+            var s = v / 255.0;
+            return s <= 0.03928 ? s / 12.92 : Math.Pow((s + 0.055) / 1.055, 2.4);
+        }
+
+        // Values are sanitised to #rrggbb before they get here.
+        var r = Convert.ToInt32(hex.Substring(1, 2), 16);
+        var g = Convert.ToInt32(hex.Substring(3, 2), 16);
+        var b = Convert.ToInt32(hex.Substring(5, 2), 16);
+        return 0.2126 * Channel(r) + 0.7152 * Channel(g) + 0.0722 * Channel(b);
+    }
 
     private string GetWheel(int i) => i switch { 0 => pageBg, 1 => gridBg, 2 => gridBorder, _ => gridNum };
 

@@ -7,7 +7,7 @@ a unit test suite that proves the game is *correct*, and an HTTP smoke test
 that proves the app *ships*. They catch different failure classes, and the
 project has real examples of each (see [lessons learned](lessons-learned.md)).
 
-## Unit and integration tests (`Sudoku.Tests`, 99 tests)
+## Unit and integration tests (`Sudoku.Tests`, 103 tests)
 
 xUnit tests built over the real service graph rather than mocks, so they
 exercise the shipped wiring. Coverage by area:
@@ -26,6 +26,7 @@ exercise the shipped wiring. Coverage by area:
 | `GameSnapshot` | Full round-trip of values/givens/notes/solution; malformed snapshots rejected |
 | `GameSession` | Restore-or-new startup, corrupt-save fallback, clock resume, persistence cadence, best-time rules (slower win keeps the record, auto-solve never records), solved games clear their save |
 | `SecurityPostureTests` | Every finding from the security review, asserted against the real pipeline (see below) |
+| `FrontendPostureTests` | Every finding from the frontend review that is checkable in source (see below) |
 
 ### Security regression tests
 
@@ -51,6 +52,23 @@ than reaching production. Each test maps to a finding:
 The paired host tests are deliberate: a security control that can only fail
 open is half-tested. One asserts the attack is blocked, the other asserts
 legitimate traffic still works.
+
+### Frontend regression tests
+
+`FrontendPostureTests` reads the shipped markup and CSS as text. It cannot
+prove something *renders*, but it catches the exact defects the frontend
+review found - each of which was invisible in a passing build:
+
+| Test | Prevents |
+|---|---|
+| `Markup_contains_no_inline_event_handler_attributes` | An inline `onclick` the CSP blocks (this shipped, and silently broke the mobile menu). Blazor's `@onclick` is correctly ignored. |
+| `Every_referenced_static_asset_exists` | A stylesheet or script reference with no file behind it - the Bootstrap link 404'd on every page load for months |
+| `No_rule_makes_an_element_click_transparent_by_a_generic_class_name` | A bare single-class `pointer-events:none` rule disabling unrelated elements that share the name |
+| `The_pencil_mark_overlay_does_not_share_a_class_with_the_notes_button` | The specific collision that made the Notes button unclickable |
+
+Contrast is *not* asserted in these tests: computing it correctly requires
+compositing translucent layers as the browser renders them, which is a browser
+job. It is measured during browser verification instead - see below.
 
 Time is controlled through `TimeProvider` fakes and persistence through an
 in-memory `IGameStore`, so the flow tests run in milliseconds.
@@ -137,6 +155,18 @@ answer at least once ([lessons learned](lessons-learned.md)).
 - **Confirm the input landed.** When an interaction appears to do nothing, a
   temporary listener reporting `isTrusted` and the event offsets separates
   "the app is broken" from "the harness missed the target".
+- **Listen for `securitypolicyviolation`.** A CSP blocks things without
+  throwing, so a clean-looking console is not a clean policy. Arming that
+  listener is what exposed the inline handler the policy was silently killing.
+- **Composite backgrounds before judging contrast.** `getComputedStyle` returns
+  the declared `rgba(...)`, not the rendered pixel; comparing text against an
+  unblended translucent layer produces confidently wrong ratios. Walk the
+  ancestor chain, alpha-composite each layer, and skip `disabled` controls
+  (WCAG exempts them).
+
+Contrast is re-measured across every difficulty state and with the colour panel
+open, because the active-pill styling differs per difficulty and only the
+selected one is filled.
 
 What that looks like in practice for this app: load the HTTP profile and
 confirm a puzzle generates and the clock advances (proof the circuit is
@@ -149,7 +179,7 @@ Two independent jobs on every push and PR to `main`:
 
 ```mermaid
 flowchart LR
-    Push["push / pull request"] --> A["build-and-test<br/>restore, Release build,<br/>99 tests"]
+    Push["push / pull request"] --> A["build-and-test<br/>restore, Release build,<br/>103 tests"]
     Push --> B["smoke-test<br/>pwsh tools/smoke-test.ps1 -StartServer<br/>boots the built DLL, 14 HTTP checks"]
 ```
 

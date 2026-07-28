@@ -200,6 +200,69 @@ last and overwrite, plus a test asserting exactly one header is sent.
 declared". Middleware ordering decides who writes last, and a response header
 set too early is a suggestion rather than a decision.
 
+## Frontend
+
+### The CSP that silently broke the mobile menu
+**Bug:** The nav menu closed itself after a tap via a literal
+`onclick="document.querySelector('.navbar-toggler').click()"` attribute.
+Inline handlers are script, so the new `script-src 'self'` policy blocked it -
+the browser reported `script-src-attr` / `blocked: inline` and the menu simply
+stayed open over the board on mobile. Nothing threw; the page looked fine.
+**Fix:** A Blazor `@onclick` handler bound to component state. No inline
+script, so the policy is satisfied without weakening it.
+**Lesson:** Tightening a CSP is a behavioural change, not just a header.
+Anything that relied on inline script stops working *silently* - grep for
+inline handlers before shipping the policy, and listen for
+`securitypolicyviolation` in the browser rather than assuming a clean console
+means a clean policy.
+
+### A stylesheet that 404'd on every page load
+**Bug:** `App.razor` linked `lib/bootstrap/dist/css/bootstrap.min.css`. The
+library was never vendored - the file is not in the repository - so every page
+load fetched a 404. It went unnoticed because the app's own scoped CSS styles
+every class that looks like Bootstrap (`navbar`, `nav-item`, `container-fluid`).
+Related dead weight: `.bi-sun-fill` / `.bi-moon-fill` rules left over from the
+removed theme toggle, and two nav icons referencing `.bi-*` classes that were
+never defined anywhere, rendering as empty spans.
+**Fix:** Removed the link, the dead rules and the phantom icons. A test now
+resolves every `@Assets[...]` reference against disk.
+**Lesson:** A missing stylesheet fails silently - the page still renders, just
+without rules that were never arriving. Template leftovers survive for months
+precisely because nothing breaks loudly.
+
+### A colour picker that could make the board invisible
+**Bug:** The board colour customisation let a player set near-black numbers on
+a near-black grid. Measured contrast: **1.03:1** against the 4.5:1 WCAG AA
+minimum - the board was genuinely unreadable. The control panel had been
+deliberately protected from this (fixed backdrops), but the board itself had
+no such guarantee.
+**Fix:** The panel computes the live contrast ratio and shows a warning with
+the measured value plus a one-click repair that switches the number colour to
+whichever of black or white reads best - leaving the player's chosen grid
+colour intact. Warning rather than override: the pick was deliberate, so
+inform instead of fighting it.
+**Lesson:** Any feature that lets a user choose colours can be driven into an
+unusable state. Decide up front whether the app prevents it, warns about it, or
+allows it - and if a promise was made about one region of the UI ("the controls
+always stay readable"), check whether the rest of the UI inherited that promise.
+
+### Measuring contrast wrong, twice
+**Bug (in the review, again in the tooling):** A first contrast sweep reported
+seven failing controls including Hint at 1.91:1 and Solve at 2.09:1. Those
+numbers were wrong. The helper read `rgba(2, 132, 199, 0.15)` and compared
+against `rgb(2,132,199)` - the *unblended* base colour - instead of the result
+of compositing that 15%-alpha layer over the panel behind it. Re-measuring with
+proper alpha compositing showed only two real failures, and that the disabled
+Undo/Redo readings were exempt anyway (WCAG does not apply contrast minimums to
+disabled controls).
+**Fix:** Composite every background layer up the ancestor chain before
+computing the ratio, and skip `disabled` elements.
+**Lesson:** Translucent backgrounds are the standard trap in contrast tooling -
+`getComputedStyle` hands back the declared value, not the rendered pixel. This
+is the second false finding in one review; the pattern is the same each time:
+a measurement that *looks* authoritative because it produced a number. Sanity-
+check surprising results before reporting them.
+
 ## Browser rendering
 
 ### The CSS transition that silently ate a feature

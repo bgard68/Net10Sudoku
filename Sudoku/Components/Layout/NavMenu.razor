@@ -4,20 +4,31 @@
     </div>
 </div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+@* The checkbox is the mobile menu's open/closed state; CSS reacts to :checked. *@
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" @bind="menuOpen" />
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+@* Collapse the menu after a navigation choice. This was an inline onclick
+   attribute, which the Content-Security-Policy blocks (script-src-attr) - so on
+   mobile the menu stayed open over the board after every tap. A Blazor handler
+   needs no inline script and works under the policy. *@
+<div class="nav-scrollable" @onclick="CloseMenu">
     <nav class="nav flex-column">
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-grid-3x3-gap-fill" aria-hidden="true"></span> Sudoku Game
+                Sudoku Game
             </NavLink>
         </div>
 
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="about">
-                <span class="bi bi-info-circle-fill" aria-hidden="true"></span> About
+                About
             </NavLink>
         </div>
     </nav>
 </div>
+
+@code {
+    private bool menuOpen;
+
+    private void CloseMenu() => menuOpen = false;
+}

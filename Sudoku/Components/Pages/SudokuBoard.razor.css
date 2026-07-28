@@ -76,7 +76,7 @@
     pointer-events:none;
 }
 /* Explains the two gestures the section supports */
-.customize-hint{font-size:11px;color:#64748b;padding:6px 2px 2px;line-height:1.5}
+.customize-hint{font-size:11px;color:#94a3b8;padding:6px 2px 2px;line-height:1.5}
 .wheel-meta{display:flex;flex-direction:column;gap:4px;min-width:0;width:100%;align-items:center}
 .wheel-name{font-size:12px;font-weight:600;color:#e2e8f0;text-align:center}
 .swatch{
@@ -115,22 +115,22 @@
 .pill:disabled{cursor:default}
 .pill.easy{color:#4ade80;border-color:#166534}
 .pill.easy:hover:not(:disabled):not(.active){background:rgba(22,163,74,0.15)}
-.pill.easy.active{background:#16a34a;border-color:#16a34a;color:#fff}
+.pill.easy.active{background:#15803d;border-color:#15803d;color:#fff}
 .pill.med{color:#fbbf24;border-color:#92400e}
 .pill.med:hover:not(:disabled):not(.active){background:rgba(217,119,6,0.15)}
-.pill.med.active{background:#d97706;border-color:#d97706;color:#fff}
+.pill.med.active{background:#b45309;border-color:#b45309;color:#fff}
 .pill.hard{color:#f87171;border-color:#991b1b}
 .pill.hard:hover:not(:disabled):not(.active){background:rgba(220,38,38,0.15)}
-.pill.hard.active{background:#dc2626;border-color:#dc2626;color:#fff}
+.pill.hard.active{background:#b91c1c;border-color:#b91c1c;color:#fff}
 .pill.pro{color:#a78bfa;border-color:#5b21b6}
 .pill.pro:hover:not(:disabled):not(.active){background:rgba(124,58,237,0.15)}
-.pill.pro.active{background:#7c3aed;border-color:#a78bfa;color:#fff}
+.pill.pro.active{background:#6d28d9;border-color:#a78bfa;color:#fff}
 
 /* Demoted actions: quiet text links below the keypad */
 .link-row{display:flex;gap:12px;justify-content:center}
 .linkbtn{
     background:none;border:none;padding:2px 4px;cursor:pointer;
-    font-size:12px;color:#64748b;text-decoration:underline;
+    font-size:12px;color:#94a3b8;text-decoration:underline;
 }
 .linkbtn:hover:not(:disabled){color:#cbd5e1}
 .linkbtn:disabled{color:#334155;cursor:default}
@@ -448,3 +448,15 @@
 
     .link-row{gap:16px;padding-top:2px}
 }
+
+/* Low-contrast warning in the colour panel. Fixed colours, so it stays
+   readable no matter what the wheels are set to. */
+.contrast-warning{
+    display:flex;flex-direction:column;gap:3px;align-items:flex-start;
+    background:#3b1d1d;border:1px solid #b91c1c;border-radius:8px;
+    padding:7px 9px;margin-bottom:6px;
+    font-size:11px;line-height:1.45;color:#fecaca;
+}
+.contrast-warning strong{color:#fca5a5;font-weight:700}
+.contrast-warning .linkbtn{color:#fca5a5;padding:0}
+.contrast-warning .linkbtn:hover{color:#fff}

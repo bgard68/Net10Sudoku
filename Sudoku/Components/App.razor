@@ -6,7 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
     <ResourcePreloader />
-    <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
+    @* Bootstrap is not used: every class that looks like it (navbar, nav-item,
+       container-fluid) is styled by this app's own scoped CSS. The template's
+       link survived without the library ever being vendored, so it 404'd on
+       every page load. *@
     <link rel="stylesheet" href="@Assets["app.css"]" />
     <link rel="stylesheet" href="@Assets["Sudoku.styles.css"]" />
     <ImportMap />
