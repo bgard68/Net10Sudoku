@@ -18,7 +18,10 @@ name: Keep the app warm
 
 on:
   schedule:
-    - cron: '*/10 * * * *'   # roughly every 10 minutes
+    # Every 20 minutes. App Service unloads an idle Free-tier instance after
+    # ~20 minutes, so this is the widest interval that still avoids cold starts
+    # - and it halves the run volume the cleanup workflow has to prune.
+    - cron: '*/20 * * * *'
   workflow_dispatch: {}       # allow a manual "wake it now" run
 
 concurrency:

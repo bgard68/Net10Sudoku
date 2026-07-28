@@ -160,6 +160,15 @@ Assert-LastExit 'enable web sockets'
 az webapp update --name $AppName --resource-group $ResourceGroup --https-only true -o none
 Assert-LastExit 'set https-only'
 
+# Declare the transport posture rather than inheriting whatever the platform
+# defaults to this year. FTPS is disabled outright: deployment goes through the
+# OIDC-authenticated GitHub workflow, so the FTP endpoint is only an extra
+# credential-bearing way in.
+Write-Host '    pinning min TLS 1.2 and disabling FTP/FTPS publishing'
+az webapp config set --name $AppName --resource-group $ResourceGroup `
+    --min-tls-version 1.2 --ftps-state Disabled -o none
+Assert-LastExit 'set min TLS / disable FTPS'
+
 Write-Host '    applying App Settings (ASPNETCORE_ENVIRONMENT, AllowedHosts, no in-place build)'
 # SCM_DO_BUILD_DURING_DEPLOYMENT=false is the important one: we deploy a
 # pre-built 'dotnet publish' package, so Azure/Oryx must NOT try to rebuild it
@@ -222,22 +231,37 @@ if (-not $fcExists) {
     Write-Host '    federated credential already present'
 }
 
-# Contributor, scoped to the resource group only (least privilege for deploy).
+# Website Contributor, scoped to the resource group. Contributor would also
+# work, but it can create and delete ANY resource in the group; the deploy only
+# ever publishes to a web app. If the workflow's federated token were misused,
+# this is the difference between "redeploy the site" and "rebuild the estate".
+$deployRole = 'Website Contributor'
 $scope = "/subscriptions/$SubId/resourceGroups/$ResourceGroup"
 $raExists = az role assignment list --assignee $AppId --scope $scope `
-    --query "[?roleDefinitionName=='Contributor'] | [0].id" -o tsv
+    --query "[?roleDefinitionName=='$deployRole'] | [0].id" -o tsv
 if (-not $raExists) {
-    az role assignment create --assignee $AppId --role Contributor --scope $scope -o none 2>$null
+    az role assignment create --assignee $AppId --role "$deployRole" --scope $scope -o none 2>$null
     if ($LASTEXITCODE -ne 0) {
         # New service principals can take a few seconds to be resolvable.
         Write-Host '    identity not resolvable yet, retrying in 20s...' -ForegroundColor Yellow
         Start-Sleep -Seconds 20
-        az role assignment create --assignee $AppId --role Contributor --scope $scope -o none
+        az role assignment create --assignee $AppId --role "$deployRole" --scope $scope -o none
         Assert-LastExit 'create role assignment'
     }
-    Write-Host "    Contributor granted on '$ResourceGroup'"
+    Write-Host "    $deployRole granted on '$ResourceGroup'"
 } else {
     Write-Host '    role assignment already present'
+}
+
+# If this app was provisioned before the role was narrowed, the old broad
+# assignment is still there and still grants everything. Flag it rather than
+# deleting it silently.
+$legacy = az role assignment list --assignee $AppId --scope $scope `
+    --query "[?roleDefinitionName=='Contributor'] | [0].id" -o tsv
+if ($legacy) {
+    Write-Host '    NOTE: a broader Contributor assignment from an earlier run is still present.' -ForegroundColor Yellow
+    Write-Host "          Remove it once deploys are confirmed working:" -ForegroundColor Yellow
+    Write-Host "          az role assignment delete --assignee $AppId --role Contributor --scope $scope" -ForegroundColor Yellow
 }
 
 # --------------------------------------------------------------------------

@@ -35,6 +35,30 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 
 # ---------------------------------------------------------------- helpers ----
 
+# Header values arrive as a string on 5.1 and a string[] on 7+; flatten both to
+# one case-insensitive name -> single-string map so checks read the same on either.
+function Get-HeaderMap {
+    param($RawHeaders)
+    $map = @{}
+    if ($null -eq $RawHeaders) { return $map }
+    foreach ($key in $RawHeaders.Keys) {
+        $value = $RawHeaders[$key]
+        if ($value -is [array]) { $value = ($value -join ', ') }
+        $map[[string]$key] = [string]$value
+    }
+    return $map
+}
+
+# Case-insensitive header lookup; returns '' when absent so callers can -match.
+function Get-Header {
+    param($Response, [string]$Name)
+    if ($null -eq $Response.Headers) { return '' }
+    foreach ($key in $Response.Headers.Keys) {
+        if ([string]::Equals($key, $Name, 'OrdinalIgnoreCase')) { return [string]$Response.Headers[$key] }
+    }
+    return ''
+}
+
 # Invoke-WebRequest throws on non-2xx; normalize success and failure into one
 # shape so failure-condition checks read the same as happy-path checks.
 function Invoke-Http {
@@ -42,7 +66,8 @@ function Invoke-Http {
         [string]$Method = 'GET',
         [Parameter(Mandatory)][string]$Url,
         [string]$Body,
-        [string]$ContentType = 'application/json'
+        [string]$ContentType = 'application/json',
+        [hashtable]$Headers
     )
 
     $args = @{
@@ -55,12 +80,18 @@ function Invoke-Http {
         $args.Body = $Body
         $args.ContentType = $ContentType
     }
+    if ($PSBoundParameters.ContainsKey('Headers')) { $args.Headers = $Headers }
 
     try {
         $resp = Invoke-WebRequest @args
         $ct = ''
         if ($resp.Headers['Content-Type']) { $ct = [string]$resp.Headers['Content-Type'] }
-        return @{ Status = [int]$resp.StatusCode; Body = [string]$resp.Content; ContentType = $ct }
+        return @{
+            Status      = [int]$resp.StatusCode
+            Body        = [string]$resp.Content
+            ContentType = $ct
+            Headers     = (Get-HeaderMap $resp.Headers)
+        }
     }
     catch {
         $r = $_.Exception.Response
@@ -91,7 +122,13 @@ function Invoke-Http {
                 $ct = $r.Content.Headers.ContentType.ToString()
             }
         } catch { }
-        return @{ Status = $status; Body = $bodyText; ContentType = $ct }
+        # Error responses expose headers differently per edition too.
+        $hdrs = @{}
+        try {
+            if ($r -is [System.Net.HttpWebResponse]) { $hdrs = Get-HeaderMap $r.Headers }
+            elseif ($r.Headers) { $hdrs = Get-HeaderMap $r.Headers }
+        } catch { }
+        return @{ Status = $status; Body = $bodyText; ContentType = $ct; Headers = $hdrs }
     }
 }
 
@@ -201,6 +238,81 @@ try {
         $json = $r.Body | ConvertFrom-Json
         ($null -ne $json.connectionToken -or $null -ne $json.connectionId) -and
             ($json.availableTransports.Count -ge 1)
+    }
+
+    Write-Host "--- security headers --------------------------------------------"
+
+    # Each check below corresponds to a finding from the security review. They
+    # exist so the hardening cannot silently regress: a header dropped during a
+    # refactor fails the build instead of shipping.
+
+    Test-Case "Response sets X-Content-Type-Options: nosniff" {
+        $r = Invoke-Http -Url "$BaseUrl/"
+        (Get-Header $r 'X-Content-Type-Options') -eq 'nosniff'
+    }
+
+    Test-Case "Response sets a Content-Security-Policy that restricts scripts" {
+        $r = Invoke-Http -Url "$BaseUrl/"
+        $csp = Get-Header $r 'Content-Security-Policy'
+        # Must constrain script sources and forbid 'unsafe-inline' scripts -
+        # a policy of only frame-ancestors is what the review found and rejected.
+        ($csp -match "default-src\s+'self'") -and
+            ($csp -match "script-src\s+'self'") -and
+            ($csp -notmatch "script-src[^;]*unsafe-inline") -and
+            ($csp -match "frame-ancestors\s+'self'") -and
+            ($csp -match "object-src\s+'none'")
+    }
+
+    Test-Case "Response sets Referrer-Policy" {
+        $r = Invoke-Http -Url "$BaseUrl/"
+        (Get-Header $r 'Referrer-Policy') -match 'strict-origin'
+    }
+
+    Test-Case "Response sets Permissions-Policy" {
+        $r = Invoke-Http -Url "$BaseUrl/"
+        (Get-Header $r 'Permissions-Policy') -match 'camera=\(\)'
+    }
+
+    Test-Case "Response sets X-Frame-Options" {
+        $r = Invoke-Http -Url "$BaseUrl/"
+        (Get-Header $r 'X-Frame-Options') -match 'SAMEORIGIN|DENY'
+    }
+
+    # Regression guard for the review's P1 finding: behind a TLS-terminating
+    # proxy the default SameAsRequest policy drops Secure from this cookie.
+    # Only meaningful over HTTPS - development deliberately uses SameAsRequest,
+    # because Always makes the antiforgery system throw on a non-SSL request.
+    # The always-on version of this check is in SecurityPostureTests, which
+    # asserts the configured policy directly and runs on every `dotnet test`.
+    Test-Case "Antiforgery cookie is HttpOnly, SameSite and Secure (HTTPS only)" {
+        if ($BaseUrl -notlike 'https://*') { return $true }
+        $r = Invoke-Http -Url "$BaseUrl/"
+        $cookies = Get-Header $r 'Set-Cookie'
+        if ($cookies -notmatch 'Antiforgery') { return $true }  # none issued on this response
+        # Isolate the antiforgery cookie; other cookies (ARR affinity) differ.
+        $anti = ($cookies -split ',\s*(?=[^;,]+=)') | Where-Object { $_ -match 'Antiforgery' } | Select-Object -First 1
+        ($anti -match '(?i)httponly') -and ($anti -match '(?i)samesite=strict') -and ($anti -match '(?i)secure')
+    }
+
+    Test-Case "Exactly one Content-Security-Policy header is sent" {
+        $r = Invoke-Http -Url "$BaseUrl/"
+        # A duplicated policy is intersected by browsers - correct by accident
+        # and hard to audit. Header values are joined with ', ' by Get-HeaderMap.
+        (Get-Header $r 'Content-Security-Policy') -notmatch 'frame-ancestors.*frame-ancestors'
+    }
+
+    Test-Case "HSTS is set when served over HTTPS" {
+        if ($BaseUrl -notlike 'https://*') { return $true }  # not applicable over plain HTTP
+        $r = Invoke-Http -Url "$BaseUrl/"
+        (Get-Header $r 'Strict-Transport-Security') -match 'max-age=\d+'
+    }
+
+    Test-Case "Server does not accept an unknown Host header" {
+        # Only meaningful against the local instance: a hosted deployment is
+        # fronted by a proxy that routes on Host before the app ever sees it.
+        if (-not $StartServer) { return $true }
+        $r = Invoke-Http -Url "$BaseUrl/" -Headers @{ Host = 'evil.example.com' }
+        $r.Status -ne 200
     }
 
     Write-Host "--- failure conditions ------------------------------------------"

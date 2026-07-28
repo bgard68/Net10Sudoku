@@ -53,9 +53,60 @@ sensitive belongs in either.
   so there is no script-injection surface.
 - `persist-credentials: false` on checkout keeps the job token out of
   `.git/config` on the runner.
-- Actions are pinned by major tag and kept current by Dependabot
-  (`.github/dependabot.yml`), which also watches NuGet.
+- Actions are pinned to **full commit SHAs**, with the human-readable tag in a
+  trailing comment, and kept current by Dependabot
+  (`.github/dependabot.yml`), which also watches NuGet. A tag is mutable:
+  whoever controls the action repository can repoint `v4` at new code that runs
+  inside this pipeline with its token. A SHA cannot be repointed.
 - Both jobs carry `timeout-minutes`.
+
+## Runtime hardening
+
+Every response carries these, set in `Program.cs` and asserted by
+`SecurityPostureTests` on every `dotnet test`:
+
+| Header | Value | Why |
+|---|---|---|
+| `Content-Security-Policy` | `default-src 'self'`, `script-src 'self'`, `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, `frame-ancestors 'self'` | Constrains where scripts may come from. `style-src` carries `'unsafe-inline'` because the board colour pickers write `style` attributes, which no nonce or hash can cover; `script-src` deliberately does not. |
+| `X-Content-Type-Options` | `nosniff` | Stops a browser second-guessing a declared content type. |
+| `X-Frame-Options` | `SAMEORIGIN` | Legacy clickjacking defence alongside `frame-ancestors`. |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` | Keeps the visited path off third-party sites. |
+| `Permissions-Policy` | camera, microphone, geolocation, payment, USB all `()` | A Sudoku board needs no device capabilities. |
+| `Strict-Transport-Security` | 30 days (non-Development only) | HSTS must never be sent from localhost. |
+
+The headers are written from a `Response.OnStarting` callback rather than
+inline, because the framework appends its own `frame-ancestors` policy while
+rendering - setting ours up front left every response carrying **two**
+`Content-Security-Policy` headers. Browsers intersect duplicates, so the result
+was accidentally correct and needlessly hard to audit. A test now asserts
+exactly one is sent.
+
+Other runtime controls:
+
+- **Forwarded headers** (`X-Forwarded-Proto`, `X-Forwarded-For`) are processed.
+  App Service terminates TLS and forwards over plain HTTP, so without this the
+  app believes every request is insecure - which silently drops `Secure` from
+  cookies and makes the client IP the proxy's address for everyone.
+- **Antiforgery cookie**: `HttpOnly`, `SameSite=Strict`, and `Secure` outside
+  Development. See the trap below before changing this.
+- **Rate limiting**: a fixed window of 240 requests per minute partitioned by
+  client IP, with the circuit's long-lived WebSocket exempted. Generating a
+  Professional puzzle is CPU-bound work any anonymous visitor can trigger, and
+  the Free tier has a daily CPU quota - exhausting it suspends the site.
+- **Circuit caps**: 20 disconnected circuits retained for 2 minutes (defaults:
+  100 for 3 minutes) and a 32 KB maximum received message, bounding what
+  abandoned or hostile connections hold on a 1 GB instance.
+- **`AllowedHosts`** is an explicit allow-list, not `*`.
+
+### The trap: `CookieSecurePolicy.Always` throws on plain HTTP
+
+The obvious fix for a cookie missing `Secure` is to set `SecurePolicy = Always`
+unconditionally. Do not. ASP.NET Core's antiforgery system **throws**
+`InvalidOperationException` when that policy is set and the request is not
+actually SSL, turning every POST into a 500. Development therefore keeps
+`SameAsRequest`, and production relies on forwarded headers making the request
+appear as HTTPS. Both halves are pinned by tests - see
+[lessons learned](lessons-learned.md#the-secure-cookie-fix-that-broke-every-post).
 
 ## Azure deployment
 
@@ -69,10 +120,31 @@ implements:
   secret is a standing key with no expiry - avoid both.
 - **Configuration comes from App Settings / Key Vault**, never from a file in
   the repository.
-- **Restrict `AllowedHosts`** to the real hostname once it exists; `*` is a
-  development default.
+- **`AllowedHosts` is an explicit allow-list**, both in `appsettings.json` and
+  as an App Setting the provisioning script writes. `*` accepts any `Host`
+  header, which permits host-header injection and cache poisoning. A wrong
+  value makes every request `400` - the post-deploy smoke test catches that
+  immediately rather than letting it sit.
 - HTTPS redirection and HSTS are already enforced outside Development
   (`Program.cs`), which is what App Service terminates TLS in front of.
+- **`min-tls-version 1.2` and `ftps-state Disabled`** are set explicitly by
+  the provisioning script rather than inherited from whatever the platform
+  defaults to this year. Deployment goes through the OIDC workflow, so the FTP
+  endpoint is only an extra credential-bearing way in.
+- **The deploy identity holds `Website Contributor`**, scoped to the resource
+  group - not `Contributor`. Both can publish the app; only the latter can
+  create and delete arbitrary resources. If the federated token were ever
+  misused, that is the difference between "redeploy the site" and "rebuild the
+  estate". Apps provisioned before this change keep the older, broader
+  assignment; the script now flags it with the command to remove it.
+
+### Still open
+
+- **GitHub secret scanning and push protection are not enabled.** Both are free
+  for public repositories. Push protection is the one control that would block
+  an accidental credential commit at `git push` time, which is exactly what the
+  hygiene above currently depends on humans not doing. Enable under
+  *Settings → Code security and analysis*.
 
 ### One correctness trap specific to this app
 

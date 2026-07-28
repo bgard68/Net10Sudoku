@@ -1,7 +1,11 @@
-# Keeps the action versions and NuGet packages patched. Actions are pinned by
-# major tag rather than commit SHA; Dependabot is what makes that safe, because
-# a compromised or vulnerable release gets a bump PR instead of sitting behind
-# a mutable tag forever.
+# Keeps the action versions and NuGet packages patched.
+#
+# Actions are pinned to full commit SHAs (with the readable tag in a trailing
+# comment). A tag is mutable: whoever controls the action repo - or anyone who
+# compromises it - can repoint v4 at new code that runs inside this pipeline
+# with its token. A SHA cannot be repointed. Dependabot understands this form
+# and raises a PR that updates both the SHA and the comment, so pinning costs
+# nothing in maintenance.
 version: 2
 updates:
   - package-ecosystem: github-actions

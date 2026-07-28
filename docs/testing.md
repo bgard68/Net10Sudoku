@@ -7,7 +7,7 @@ a unit test suite that proves the game is *correct*, and an HTTP smoke test
 that proves the app *ships*. They catch different failure classes, and the
 project has real examples of each (see [lessons learned](lessons-learned.md)).
 
-## Unit tests (`Sudoku.Tests`, 87 tests)
+## Unit and integration tests (`Sudoku.Tests`, 99 tests)
 
 xUnit tests built over the real service graph rather than mocks, so they
 exercise the shipped wiring. Coverage by area:
@@ -25,6 +25,32 @@ exercise the shipped wiring. Coverage by area:
 | Mistakes | Wrong placements count, notes never do, undo does not forgive, snapshot round-trips the count |
 | `GameSnapshot` | Full round-trip of values/givens/notes/solution; malformed snapshots rejected |
 | `GameSession` | Restore-or-new startup, corrupt-save fallback, clock resume, persistence cadence, best-time rules (slower win keeps the record, auto-solve never records), solved games clear their save |
+| `SecurityPostureTests` | Every finding from the security review, asserted against the real pipeline (see below) |
+
+### Security regression tests
+
+`SecurityPostureTests` boots the actual HTTP pipeline in-process with
+`WebApplicationFactory<Program>` and asserts the hardening directly, so a
+header or cookie policy dropped during a refactor fails `dotnet test` rather
+than reaching production. Each test maps to a finding:
+
+| Test | Prevents |
+|---|---|
+| `Responses_forbid_content_type_sniffing` | `nosniff` going missing |
+| `Responses_carry_a_referrer_and_permissions_policy` | Referrer/Permissions policy removal |
+| `Responses_are_protected_against_framing` | Clickjacking defences removal |
+| `Content_security_policy_restricts_scripts_and_objects` | Regressing to a `frame-ancestors`-only policy |
+| `Content_security_policy_never_allows_inline_scripts` | `'unsafe-inline'` creeping into `script-src` (it is required for `style-src`, so the temptation is real) |
+| `Exactly_one_content_security_policy_header_is_sent` | The duplicate-header bug returning |
+| `Antiforgery_cookie_is_secure_and_locked_down_in_production` | The `Secure` flag being dropped behind the proxy |
+| `Antiforgery_cookie_policy_does_not_break_plain_http_development` | Someone "simplifying" the policy to `Always` everywhere, which throws on non-SSL requests |
+| `Forwarded_headers_are_processed` | Losing the scheme/client-IP awareness the two above depend on |
+| `Unknown_host_headers_are_rejected` / `The_configured_host_is_still_served` | `AllowedHosts` regressing to `*`, **and** a too-narrow value taking the site down |
+| `Not_found_responses_do_not_leak_diagnostics` | Stack traces or framework detail in error pages |
+
+The paired host tests are deliberate: a security control that can only fail
+open is half-tested. One asserts the attack is blocked, the other asserts
+legitimate traffic still works.
 
 Time is controlled through `TimeProvider` fakes and persistence through an
 in-memory `IGameStore`, so the flow tests run in milliseconds.
@@ -33,7 +59,7 @@ in-memory `IGameStore`, so the flow tests run in milliseconds.
 dotnet test
 ```
 
-## HTTP smoke test (`tools/smoke-test.ps1`, 14 checks)
+## HTTP smoke test (`tools/smoke-test.ps1`, 23 checks)
 
 This is a Blazor Server app - there is no REST/JSON API. The HTTP surface is
 pages, static assets, and the SignalR negotiate endpoint, and the smoke test
@@ -46,6 +72,15 @@ Happy paths:
   content types
 - `POST /_blazor/negotiate` opens a circuit negotiation (the transport the
   whole game runs over)
+
+Security headers (the review's findings, re-checked against whatever is
+actually running - locally in CI, and against the live URL after deploy):
+- `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` and
+  `X-Frame-Options` are present
+- The CSP restricts scripts and is sent exactly once
+- HSTS is set when the target is HTTPS
+- The antiforgery cookie carries `Secure` over HTTPS
+- An unknown `Host` header is refused
 
 Failure conditions:
 - Unknown routes (including a fake deep API path) return 404 with the
@@ -114,7 +149,7 @@ Two independent jobs on every push and PR to `main`:
 
 ```mermaid
 flowchart LR
-    Push["push / pull request"] --> A["build-and-test<br/>restore, Release build,<br/>87 unit tests"]
+    Push["push / pull request"] --> A["build-and-test<br/>restore, Release build,<br/>99 tests"]
     Push --> B["smoke-test<br/>pwsh tools/smoke-test.ps1 -StartServer<br/>boots the built DLL, 14 HTTP checks"]
 ```
 
