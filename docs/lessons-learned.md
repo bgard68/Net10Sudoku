@@ -169,6 +169,24 @@ liveness risk, not just a correctness one. Verify hardening in an environment
 that actually resembles production, and read the exception instead of inferring
 it - the framework named the property, the value and the reason in one line.
 
+### An API error is not evidence a feature is off
+**Bug (in the review, not the code):** The security review reported that GitHub
+secret scanning and push protection were not enabled, and recommended turning
+them on. Both were already on. The claim came from the secret-scanning REST
+endpoint returning *"Repository does not have GitHub Advanced Security
+enabled"* - which is a statement about the paid GHAS **API surface** on a free
+public repository, not about whether scanning is running. Opening
+*Settings → Advanced Security* showed Secret Protection, push protection and
+CodeQL all active.
+
+**Fix:** Verify platform settings in the settings UI, and record the actual
+state in `security.md` rather than an inference.
+
+**Lesson:** A failed API call answers "can I query this?", not "is this
+configured?". When a security control is reported missing, confirm it in the
+place that owns the setting before writing it down - a false negative in a
+security report wastes attention and erodes trust in the rest of the findings.
+
 ### One header, sent twice
 **Bug:** After adding a Content-Security-Policy, responses carried **two** CSP
 headers: the new policy, and a bare `frame-ancestors 'self'` the framework

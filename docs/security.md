@@ -138,13 +138,31 @@ implements:
   estate". Apps provisioned before this change keep the older, broader
   assignment; the script now flags it with the command to remove it.
 
-### Still open
+## Platform controls (GitHub)
 
-- **GitHub secret scanning and push protection are not enabled.** Both are free
-  for public repositories. Push protection is the one control that would block
-  an accidental credential commit at `git push` time, which is exactly what the
-  hygiene above currently depends on humans not doing. Enable under
-  *Settings → Code security and analysis*.
+Enabled on the repository, verified in *Settings → Advanced Security*:
+
+| Control | State | What it buys |
+|---|---|---|
+| Secret Protection (secret scanning) | On | Scans history and every push for known credential formats. |
+| **Push protection** | On | **Blocks** a push containing a detected secret instead of alerting afterwards - the one control that stops the mistake rather than reporting it. |
+| CodeQL analysis | On (default setup) | Static analysis on the C# on every push. |
+| Copilot Autofix | On | Suggested fixes on CodeQL alerts. |
+| Private vulnerability reporting | On | A non-public channel for someone to report a flaw. |
+| Dependency graph + Dependabot | On | Feeds the weekly bump PRs (`.github/dependabot.yml`). |
+| Branch protection on `main` | On | PR and signed-commit rules. |
+
+Under *Protection rules*, the check-runs failure threshold is **High or
+higher** for security alerts, so medium and low CodeQL findings surface as
+alerts without blocking a merge. That is a deliberate default, not an
+oversight - tighten it if the noise level ever proves low enough.
+
+> A note on how this was verified, because it is a trap worth remembering:
+> querying the secret-scanning REST endpoint returns *"Repository does not have
+> GitHub Advanced Security enabled"* on a free public repository. That is a
+> statement about the paid GHAS **API surface**, not about whether scanning is
+> running - the free built-in scanning was active the whole time. An API error
+> is not evidence a feature is off; check the settings UI.
 
 ### One correctness trap specific to this app
 
