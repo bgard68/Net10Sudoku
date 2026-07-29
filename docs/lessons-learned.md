@@ -38,6 +38,7 @@ ones where that thing is a human following a procedure rather than a test.
 | PowerShell edition differences in tooling | The CI smoke-test job runs on Ubuntu/pwsh - both edition bugs were caught there, not locally |
 | An SDK pin no runner can resolve | Any CI run - it fails at `setup-dotnet` |
 | **A board colour combination nobody can read** | **Runtime guard, not a test**: the colour panel measures live contrast and warns with a repair. Contrast itself is browser-verified, because compositing translucent layers is a rendering job |
+| **A control shipping under WCAG AA** | **Browser verification only** - measured across every difficulty state and with the panel open, per the procedure in [testing](testing.md#browser-verification) |
 | **CSS transitions, overlay alignment, flex sizing, picker anchoring, touch drags** | **Browser verification only** - the procedure is written down in [testing](testing.md#browser-verification). No automated guard; these need a real rendering engine |
 | **Timer callbacks off the sync context** | **Code review only** - threading correctness here has no cheap assertion |
 | **A false finding from a misread API or a bad measurement** | **Procedure only** - verify in the system that owns the setting, and sanity-check surprising numbers before reporting |
@@ -284,6 +285,20 @@ inform instead of fighting it.
 unusable state. Decide up front whether the app prevents it, warns about it, or
 allows it - and if a promise was made about one region of the UI ("the controls
 always stay readable"), check whether the rest of the UI inherited that promise.
+
+### Controls that looked fine and measured under AA
+**Bug:** Two controls shipped below the WCAG AA 4.5:1 minimum: the filled
+active difficulty pill (white on `#16a34a`, **3.3:1**) and the quiet action
+links (`#64748b`, **3.99:1**). Both were my own colour choices from the UI
+redesign, and both look perfectly legible - "it reads fine to me" is exactly
+how sub-AA contrast survives review.
+**Fix:** Darkened all four active-pill fills to their 700-weight shades and
+lifted the link colour to `#94a3b8`. Re-measured across every difficulty state
+(only the selected pill is filled, so each state needed its own check) and with
+the colour panel open: zero failures.
+**Lesson:** Contrast is a measurement, not an opinion - and the *active* state
+of a control is a different measurement from its resting state. Check every
+variant a control can be in, not the one that happens to be on screen.
 
 ### Measuring contrast wrong, twice
 **Bug (in the review, again in the tooling):** A first contrast sweep reported

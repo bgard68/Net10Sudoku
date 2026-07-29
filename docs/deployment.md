@@ -246,10 +246,12 @@ with how this app works:
 - **It idles out and cold-starts.** No *Always On*, ~60 CPU-minutes/day, one
   shared instance. After a period of no traffic the app unloads; the next
   request pays a few seconds of cold start. The included **`keep-warm.yml`**
-  workflow mitigates this: it pings `APP_URL` every ~10 minutes so the instance
-  stays loaded. With no database, the ping only warms the web server. It no-ops
-  until `APP_URL` is set (the provisioning script sets it), and on a public repo
-  the Actions minutes are free.
+  workflow mitigates this: it pings `APP_URL` every ~20 minutes so the instance
+  stays loaded. That is the widest interval that still beats the unload window,
+  chosen over a tighter one because it halves the run volume the cleanup
+  workflow has to prune. With no database, the ping only warms the web server.
+  It no-ops until `APP_URL` is set (the provisioning script sets it), and on a
+  public repo the Actions minutes are free.
 - **Saved games can reset on that unload.** Games are stored in the browser but
   encrypted with ASP.NET Core Data Protection, whose keys default to the local
   filesystem. When the instance recycles, the key ring can change and older
