@@ -106,7 +106,7 @@ unconditionally. Do not. ASP.NET Core's antiforgery system **throws**
 actually SSL, turning every POST into a 500. Development therefore keeps
 `SameAsRequest`, and production relies on forwarded headers making the request
 appear as HTTPS. Both halves are pinned by tests - see
-[lessons learned](lessons-learned.md#the-secure-cookie-fix-that-broke-every-post).
+[lessons learned](lessons/security.md#the-secure-cookie-fix-that-broke-every-post).
 
 ## Azure deployment
 

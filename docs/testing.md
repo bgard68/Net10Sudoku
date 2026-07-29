@@ -118,7 +118,7 @@ The script boots the app from its **built DLL** as a single process (so CI
 can stop it cleanly on any OS), waits for readiness, runs the checks, and
 exits non-zero on any failure. It is compatible with both Windows
 PowerShell 5.1 and PowerShell 7+ - the differences between those editions
-bit twice during development; see [lessons learned](lessons-learned.md).
+bit twice during development; see [lessons learned](lessons/operations.md).
 
 ```bash
 # self-contained: build, start, test, stop
@@ -142,7 +142,7 @@ configuration regression now fails a build in seconds.
 Rendering, layout and interaction claims cannot be seen by a unit test or by
 the smoke test, so they are settled in a real browser. The method below is
 not ceremony - every rule on it exists because skipping it produced a wrong
-answer at least once ([lessons learned](lessons-learned.md)).
+answer at least once ([lessons learned](lessons/frontend.md)).
 
 - **Drive real input.** Clicks resolved through the compositor, never
   `element.click()` or a constructed event. Dispatched events skip hit
