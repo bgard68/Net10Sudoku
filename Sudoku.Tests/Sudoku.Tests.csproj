@@ -12,7 +12,7 @@
     <!-- Boots the real HTTP pipeline in-process so the security posture
          (headers, cookie policy, host filtering) is asserted by `dotnet test`,
          not only by the smoke test after something is already running. -->
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.10" />
   </ItemGroup>
 
   <ItemGroup>
