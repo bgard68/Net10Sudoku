@@ -6,6 +6,19 @@
 # with its token. A SHA cannot be repointed. Dependabot understands this form
 # and raises a PR that updates both the SHA and the comment, so pinning costs
 # nothing in maintenance.
+#
+# Both ecosystems are GROUPED, so a week's updates arrive as one pull request instead of one per
+# package. On 2026-08-17 there were six open at once, the oldest nine days old, and they were not
+# independent: #16 and #20 both edited Sudoku.Tests.csproj, so merging them put #19 into conflict
+# and it had to be closed rather than merged. One pull request per package manufactures that
+# conflict; one pull request per week cannot.
+#
+# Minor and patch are grouped. A major still arrives alone and gets read on its own, which is what
+# you want for something like xunit.runner.visualstudio 3.x -> 4.x: that upgrade fails by silently
+# not discovering tests, so it needs its own pull request and its own look at the test count.
+#
+# Note this repo has NO packages.lock.json, so grouping here is purely about volume and review
+# noise. There is no locked-mode restore to go inconsistent, and so no NU1004 class of failure.
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -14,6 +27,12 @@ updates:
       interval: weekly
     commit-message:
       prefix: "chore(ci)"
+    # Actions are grouped across ALL update types, unlike nuget below. Sub-actions of the same
+    # suite must move together — github/codeql-action's init, analyze and upload-sarif fail with a
+    # version mismatch if they diverge — and that constraint holds regardless of semver level.
+    groups:
+      github-actions:
+        patterns: ["*"]
 
   - package-ecosystem: nuget
     directory: "/"
@@ -21,3 +40,7 @@ updates:
       interval: weekly
     commit-message:
       prefix: "chore(deps)"
+    groups:
+      nuget:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
