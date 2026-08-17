@@ -8,7 +8,7 @@
     <PackageReference Include="coverlet.collector" Version="10.0.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
     <!-- Boots the real HTTP pipeline in-process so the security posture
          (headers, cookie policy, host filtering) is asserted by `dotnet test`,
          not only by the smoke test after something is already running. -->
