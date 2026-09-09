@@ -29,6 +29,8 @@ public sealed class GradingGrid
 
     public GradingGrid(Board board)
     {
+        ArgumentNullException.ThrowIfNull(board);
+
         for (int r = 0; r < 9; r++)
         for (int c = 0; c < 9; c++)
             _values[r * 9 + c] = board.Get(r, c) ?? 0;

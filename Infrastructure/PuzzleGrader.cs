@@ -17,6 +17,8 @@ public sealed class PuzzleGrader : IPuzzleGrader
 
     public PuzzleGrader(IEnumerable<IGradingTechnique> techniques)
     {
+        ArgumentNullException.ThrowIfNull(techniques);
+
         // Cheapest first, so the grade reflects what the puzzle *demands*,
         // not merely what some expensive technique could also find.
         _techniques = techniques.OrderBy(t => t.Tier).ToArray();
@@ -33,6 +35,8 @@ public sealed class PuzzleGrader : IPuzzleGrader
 
     public TechniqueTier Grade(Board board)
     {
+        ArgumentNullException.ThrowIfNull(board);
+
         var grid = new GradingGrid(board);
         var tier = TechniqueTier.Singles;
 

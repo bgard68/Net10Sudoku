@@ -30,6 +30,11 @@ public sealed class SudokuService : IGameService
 
     public SudokuService(ISudokuGenerator generator, ISudokuSolver solver, ISudokuValidator validator, IConflictDetector conflicts)
     {
+        ArgumentNullException.ThrowIfNull(generator);
+        ArgumentNullException.ThrowIfNull(solver);
+        ArgumentNullException.ThrowIfNull(validator);
+        ArgumentNullException.ThrowIfNull(conflicts);
+
         _generator = generator;
         _solver = solver;
         _validator = validator;
@@ -63,6 +68,7 @@ public sealed class SudokuService : IGameService
     // History intentionally starts empty - undo cannot reach past the reload.
     public void Restore(Board board, int mistakes = 0)
     {
+        ArgumentNullException.ThrowIfNull(board);
         Current = board;
         StartFresh();
         Mistakes = Math.Max(0, mistakes);
@@ -70,12 +76,23 @@ public sealed class SudokuService : IGameService
 
     public void ClearSelection() => Selected = null;
 
-    public void Select(int row, int col) => Selected = new Position(row, col);
+    // An off-grid selection is ignored rather than stored: keeping it would arm
+    // every later Place/Clear call with coordinates the board rejects.
+    public void Select(int row, int col)
+    {
+        var position = new Position(row, col);
+        if (!position.IsValid) return;
+        Selected = position;
+    }
 
     public void ToggleNotesMode() => NotesMode = !NotesMode;
 
     public void Place(int value)
     {
+        // Impossible digits are ignored exactly like other impossible moves
+        // (no selection, given cell) - the number pad can only send 1..9, so
+        // anything else is a caller bug that must not dereference the board.
+        if (value is < 1 or > 9) return;
         if (Selected is null) return;
         var (r, c) = Selected.Value;
         var cell = Current[r, c];

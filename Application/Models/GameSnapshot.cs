@@ -17,6 +17,8 @@ public sealed record GameSnapshot
 
     public static GameSnapshot Capture(Board board, TimeSpan elapsed, Difficulty difficulty, int mistakes = 0)
     {
+        ArgumentNullException.ThrowIfNull(board);
+
         var values = new int[81];
         var givens = new bool[81];
         var notes = new int[81];
@@ -50,6 +52,12 @@ public sealed record GameSnapshot
     // because stored data is outside the application's control.
     public Board ToBoard()
     {
+        // The JSON deserializer can defeat the nullability annotations when the
+        // stored payload was tampered with ("Values": null), so a null array is
+        // treated exactly like a wrongly sized one: malformed data, not a crash.
+        if (Values is null || Givens is null || NoteMasks is null)
+            throw new ArgumentException("Snapshot arrays must not be null.");
+
         if (Values.Length != 81 || Givens.Length != 81 || NoteMasks.Length != 81 ||
             (Solution is not null && Solution.Length != 81))
             throw new ArgumentException("Snapshot arrays must each hold 81 cells.");

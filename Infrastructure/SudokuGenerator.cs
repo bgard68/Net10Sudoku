@@ -17,6 +17,9 @@ public sealed class SudokuGenerator : ISudokuGenerator
 
     public SudokuGenerator(ISudokuSolver solver, IPuzzleGrader grader)
     {
+        ArgumentNullException.ThrowIfNull(solver);
+        ArgumentNullException.ThrowIfNull(grader);
+
         _solver = solver;
         _grader = grader;
     }
