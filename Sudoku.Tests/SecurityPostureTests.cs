@@ -25,7 +25,7 @@ public class SecurityPostureTests : IClassFixture<WebApplicationFactory<Program>
         _factory.WithWebHostBuilder(b => b.UseEnvironment("Production"));
 
     [Fact]
-    public async Task Responses_forbid_content_type_sniffing()
+    public async Task Get_AnyResponse_ForbidsContentTypeSniffing()
     {
         using var client = Production().CreateClient();
 
@@ -35,7 +35,7 @@ public class SecurityPostureTests : IClassFixture<WebApplicationFactory<Program>
     }
 
     [Fact]
-    public async Task Responses_carry_a_referrer_and_permissions_policy()
+    public async Task Get_AnyResponse_CarriesAReferrerAndPermissionsPolicy()
     {
         using var client = Production().CreateClient();
 
@@ -46,7 +46,7 @@ public class SecurityPostureTests : IClassFixture<WebApplicationFactory<Program>
     }
 
     [Fact]
-    public async Task Responses_are_protected_against_framing()
+    public async Task Get_AnyResponse_IsProtectedAgainstFraming()
     {
         using var client = Production().CreateClient();
 
@@ -59,7 +59,7 @@ public class SecurityPostureTests : IClassFixture<WebApplicationFactory<Program>
     // The review found a policy consisting only of frame-ancestors: clickjacking
     // was covered, script injection was not.
     [Fact]
-    public async Task Content_security_policy_restricts_scripts_and_objects()
+    public async Task ContentSecurityPolicy_AnyResponse_RestrictsScriptsAndObjects()
     {
         using var client = Production().CreateClient();
 
@@ -76,7 +76,7 @@ public class SecurityPostureTests : IClassFixture<WebApplicationFactory<Program>
     // because the board colour pickers write style attributes, but script must
     // never acquire it by accident.
     [Fact]
-    public async Task Content_security_policy_never_allows_inline_scripts()
+    public async Task ContentSecurityPolicy_ScriptDirective_NeverAllowsInlineOrEval()
     {
         using var client = Production().CreateClient();
 
@@ -95,7 +95,7 @@ public class SecurityPostureTests : IClassFixture<WebApplicationFactory<Program>
     // while rendering. Setting ours too early produced two CSP headers, which
     // browsers intersect - correct by luck, confusing to audit.
     [Fact]
-    public async Task Exactly_one_content_security_policy_header_is_sent()
+    public async Task ContentSecurityPolicy_AnyResponse_IsSentExactlyOnce()
     {
         using var client = Production().CreateClient();
 
@@ -108,7 +108,7 @@ public class SecurityPostureTests : IClassFixture<WebApplicationFactory<Program>
     // The P1 finding. Behind a TLS-terminating proxy the request looks like
     // plain HTTP, so the SameAsRequest default silently drops Secure.
     [Fact]
-    public void Antiforgery_cookie_is_secure_and_locked_down_in_production()
+    public void AntiforgeryCookie_ProductionEnvironment_IsSecureHttpOnlyAndStrict()
     {
         using var factory = Production();
         var options = factory.Services.GetRequiredService<IOptions<AntiforgeryOptions>>().Value;
@@ -122,7 +122,7 @@ public class SecurityPostureTests : IClassFixture<WebApplicationFactory<Program>
     // plain http://localhost must not use it. Setting it unconditionally turned
     // every POST into a 500; this pins the distinction.
     [Fact]
-    public void Antiforgery_cookie_policy_does_not_break_plain_http_development()
+    public void AntiforgeryCookie_DevelopmentEnvironment_UsesSameAsRequestSoPlainHttpWorks()
     {
         using var factory = _factory.WithWebHostBuilder(b => b.UseEnvironment("Development"));
         var options = factory.Services.GetRequiredService<IOptions<AntiforgeryOptions>>().Value;
@@ -134,7 +134,7 @@ public class SecurityPostureTests : IClassFixture<WebApplicationFactory<Program>
     // behind App Service, which is what dropped the Secure flag in the first
     // place and would make any IP-partitioned rate limiting meaningless.
     [Fact]
-    public void Forwarded_headers_are_processed()
+    public void ForwardedHeaders_ProductionEnvironment_ProcessesProtoAndFor()
     {
         using var factory = Production();
         var options = factory.Services.GetRequiredService<IOptions<ForwardedHeadersOptions>>().Value;
@@ -144,7 +144,7 @@ public class SecurityPostureTests : IClassFixture<WebApplicationFactory<Program>
     }
 
     [Fact]
-    public async Task Unknown_host_headers_are_rejected()
+    public async Task Get_UnknownHostHeader_IsRejected()
     {
         using var client = Production().CreateClient();
 
@@ -156,7 +156,7 @@ public class SecurityPostureTests : IClassFixture<WebApplicationFactory<Program>
     }
 
     [Fact]
-    public async Task The_configured_host_is_still_served()
+    public async Task Get_ConfiguredHost_IsStillServed()
     {
         using var client = Production().CreateClient();
 
@@ -167,7 +167,7 @@ public class SecurityPostureTests : IClassFixture<WebApplicationFactory<Program>
 
     // A 404 must not hand an attacker framework versions or stack frames.
     [Fact]
-    public async Task Not_found_responses_do_not_leak_diagnostics()
+    public async Task Get_UnknownPath_ReturnsNotFoundWithoutLeakingDiagnostics()
     {
         using var client = Production().CreateClient();
 

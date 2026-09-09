@@ -1,3 +1,4 @@
+using Sudoku.Application.Models;
 using Sudoku.Domain;
 
 namespace Sudoku.Tests;
@@ -5,7 +6,7 @@ namespace Sudoku.Tests;
 public class SudokuSolverTests
 {
     [Fact]
-    public void Solves_an_empty_board_to_a_complete_valid_grid()
+    public void TrySolve_EmptyBoard_ProducesACompleteValidGrid()
     {
         var board = new Board();
 
@@ -14,7 +15,7 @@ public class SudokuSolverTests
     }
 
     [Fact]
-    public void Returns_false_when_the_givens_conflict()
+    public void TrySolve_ConflictingGivens_ReturnsFalse()
     {
         var board = new Board();
         board.Set(0, 0, 5);
@@ -24,23 +25,29 @@ public class SudokuSolverTests
     }
 
     [Fact]
-    public void A_failed_solve_leaves_the_board_untouched()
+    public void TrySolve_ConflictingGivens_LeavesTheBoardExactlyAsItWas()
     {
         var board = new Board();
         board.Set(0, 0, 5);
         board.Set(0, 8, 5);
+        var before = TestBoards.Values(board);
 
         TestGame.Solver().TrySolve(board);
 
-        int filled = 0;
-        for (int r = 0; r < 9; r++)
-        for (int c = 0; c < 9; c++)
-            if (board.Get(r, c) is not null) filled++;
-        Assert.Equal(2, filled);
+        Assert.Equal(before, TestBoards.Values(board));
+        Assert.Equal(2, TestBoards.FilledCellCount(board));
     }
 
     [Fact]
-    public void CountSolutions_reports_zero_for_a_contradictory_board()
+    public void TrySolve_NullBoard_ThrowsArgumentNullException()
+    {
+        var ex = Assert.Throws<ArgumentNullException>(() => TestGame.Solver().TrySolve(null!));
+
+        Assert.Equal("board", ex.ParamName);
+    }
+
+    [Fact]
+    public void CountSolutions_ContradictoryBoard_ReturnsZero()
     {
         var board = new Board();
         board.Set(0, 0, 5);
@@ -50,49 +57,45 @@ public class SudokuSolverTests
     }
 
     [Fact]
-    public void CountSolutions_reports_one_for_a_solved_board()
+    public void CountSolutions_SolvedBoard_ReturnsOne()
     {
-        var board = new Board();
-        Assert.True(TestGame.Solver().TrySolve(board));
-
-        Assert.Equal(1, TestGame.Solver().CountSolutions(board, 2));
+        Assert.Equal(1, TestGame.Solver().CountSolutions(TestBoards.CanonicalSolvedBoard(), 2));
     }
 
+    // An empty grid has billions of completions; the counter must stop at the
+    // limit instead of enumerating them.
     [Fact]
-    public void CountSolutions_stops_at_the_limit_on_a_wide_open_board()
+    public void CountSolutions_WideOpenBoard_StopsAtTheLimit()
     {
-        // An empty grid has billions of completions; the counter must stop
-        // at the limit instead of enumerating them.
         Assert.Equal(2, TestGame.Solver().CountSolutions(new Board(), 2));
     }
 
-    [Fact]
-    public void CountSolutions_does_not_mutate_the_board()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void CountSolutions_NonPositiveLimit_ReturnsZeroWithoutSearching(int limit)
     {
-        var validator = TestGame.Validator();
-        var generator = TestGame.Generator(validator, TestGame.Solver());
-        var board = generator.Generate(Sudoku.Application.Models.Difficulty.Easy);
+        Assert.Equal(0, TestGame.Solver().CountSolutions(new Board(), limit));
+    }
 
-        var before = new int?[9, 9];
-        for (int r = 0; r < 9; r++)
-        for (int c = 0; c < 9; c++)
-            before[r, c] = board.Get(r, c);
+    [Fact]
+    public void CountSolutions_AnyBoard_LeavesItUnmodified()
+    {
+        var board = TestGame.Generator(TestGame.Validator(), TestGame.Solver()).Generate(Difficulty.Easy);
+        var before = TestBoards.Values(board);
 
         TestGame.Solver().CountSolutions(board, 2);
 
-        for (int r = 0; r < 9; r++)
-        for (int c = 0; c < 9; c++)
-            Assert.Equal(before[r, c], board.Get(r, c));
+        Assert.Equal(before, TestBoards.Values(board));
     }
 
     // The fast bitmask counter must agree with the naive reference counter that
     // the rest of the suite uses as its independent oracle.
     [Fact]
-    public void Fast_counter_agrees_with_the_reference_counter()
+    public void CountSolutions_GeneratedPuzzle_AgreesWithTheReferenceCounter()
     {
         var validator = TestGame.Validator();
-        var generator = TestGame.Generator(validator, TestGame.Solver());
-        var board = generator.Generate(Sudoku.Application.Models.Difficulty.Medium);
+        var board = TestGame.Generator(validator, TestGame.Solver()).Generate(Difficulty.Medium);
 
         Assert.Equal(
             TestGame.CountSolutions(board, validator),

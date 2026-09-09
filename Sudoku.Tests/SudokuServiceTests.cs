@@ -1,15 +1,15 @@
 using Sudoku.Application.Models;
+using Sudoku.Domain;
 
 namespace Sudoku.Tests;
 
 public class SudokuServiceTests
 {
     [Fact]
-    public void Place_leaves_given_cells_untouched()
+    public void Place_OnAGivenCell_LeavesTheClueUntouched()
     {
         var svc = TestGame.Service();
         svc.New(Difficulty.Easy);
-
         var (row, col) = FirstGiven(svc.Current);
         var clue = svc.Current.Get(row, col);
 
@@ -20,11 +20,12 @@ public class SudokuServiceTests
     }
 
     [Fact]
-    public void ClearAll_removes_player_entries_but_keeps_the_clues()
+    public void ClearAll_BoardWithPlayerEntries_RemovesThemAndKeepsEveryClue()
     {
         var svc = TestGame.Service();
         svc.New(Difficulty.Easy);
-
+        var givensBefore = TestBoards.Givens(svc.Current);
+        var cluesBefore = CluesOnly(svc.Current);
         var (row, col) = TestGame.FirstEmptyCell(svc.Current);
         svc.Select(row, col);
         svc.Place(5);
@@ -32,20 +33,15 @@ public class SudokuServiceTests
         svc.ClearAll();
 
         Assert.Null(svc.Current.Get(row, col));
-        for (int r = 0; r < 9; r++)
-        for (int c = 0; c < 9; c++)
-        {
-            if (svc.Current[r, c].IsGiven)
-                Assert.NotNull(svc.Current.Get(r, c));
-        }
+        Assert.Equal(cluesBefore, CluesOnly(svc.Current));
+        Assert.Equal(givensBefore, TestBoards.Givens(svc.Current));
     }
 
     [Fact]
-    public void Clear_leaves_given_cells_untouched()
+    public void Clear_OnAGivenCell_LeavesTheClueUntouched()
     {
         var svc = TestGame.Service();
         svc.New(Difficulty.Easy);
-
         var (row, col) = FirstGiven(svc.Current);
         var clue = svc.Current.Get(row, col);
 
@@ -58,11 +54,10 @@ public class SudokuServiceTests
     // Solve used to run the backtracker over the live board, so it reported
     // "No solution" once the player had entered anything incorrect.
     [Fact]
-    public void Solve_completes_the_board_despite_a_wrong_player_entry()
+    public void Solve_AfterAWrongPlayerEntry_StillCompletesTheBoard()
     {
         var svc = TestGame.Service();
         svc.New(Difficulty.Easy);
-
         var (row, col) = TestGame.FirstEmptyCell(svc.Current);
         svc.Select(row, col);
         svc.Place(TestGame.WrongValueFor(svc.Current, row, col));
@@ -72,21 +67,19 @@ public class SudokuServiceTests
     }
 
     [Fact]
-    public void Solve_produces_the_recorded_solution()
+    public void Solve_GeneratedPuzzle_ReproducesTheRecordedSolutionExactly()
     {
         var svc = TestGame.Service();
         svc.New(Difficulty.Medium);
-        var expected = Snapshot(svc.Current);
+        var expected = TestBoards.Solution(svc.Current);
 
         Assert.True(svc.Solve());
 
-        for (int r = 0; r < 9; r++)
-        for (int c = 0; c < 9; c++)
-            Assert.Equal(expected[r, c], svc.Current.Get(r, c));
+        Assert.Equal(expected, TestBoards.Values(svc.Current));
     }
 
     [Fact]
-    public void A_freshly_generated_board_is_valid_but_not_complete()
+    public void Validate_FreshlyGeneratedBoard_IsValidButNotComplete()
     {
         var svc = TestGame.Service();
         svc.New(Difficulty.Medium);
@@ -96,11 +89,10 @@ public class SudokuServiceTests
     }
 
     [Fact]
-    public void HasConflict_flags_a_duplicate_in_the_same_row()
+    public void HasConflict_DuplicateInTheSameRow_IsFlagged()
     {
         var svc = TestGame.Service();
         svc.New(Difficulty.Easy);
-
         var (row, col) = TestGame.FirstEmptyCell(svc.Current);
         var clash = FirstClueInRow(svc.Current, row, col);
 
@@ -111,16 +103,25 @@ public class SudokuServiceTests
         Assert.False(svc.Validate());
     }
 
-    private static int[,] Snapshot(Domain.Board board)
+    [Fact]
+    public void HasConflict_EmptyCell_IsNeverFlagged()
     {
-        var grid = new int[9, 9];
-        for (int r = 0; r < 9; r++)
-        for (int c = 0; c < 9; c++)
-            grid[r, c] = board.SolutionAt(r, c)!.Value;
-        return grid;
+        var svc = TestGame.Service();
+        svc.New(Difficulty.Easy);
+        var (row, col) = TestGame.FirstEmptyCell(svc.Current);
+
+        Assert.False(svc.HasConflict(row, col));
     }
 
-    private static (int Row, int Col) FirstGiven(Domain.Board board)
+    // Clue values only, with player entries masked out.
+    private static int?[] CluesOnly(Board board)
+    {
+        var values = TestBoards.Values(board);
+        var givens = TestBoards.Givens(board);
+        return values.Select((v, i) => givens[i] ? v : null).ToArray();
+    }
+
+    private static (int Row, int Col) FirstGiven(Board board)
     {
         for (int r = 0; r < 9; r++)
         for (int c = 0; c < 9; c++)
@@ -129,7 +130,7 @@ public class SudokuServiceTests
         throw new InvalidOperationException("Board has no given cells.");
     }
 
-    private static int FirstClueInRow(Domain.Board board, int row, int exceptCol)
+    private static int FirstClueInRow(Board board, int row, int exceptCol)
     {
         for (int c = 0; c < 9; c++)
         {

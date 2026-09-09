@@ -5,7 +5,7 @@ namespace Sudoku.Tests;
 public class BoardTests
 {
     [Fact]
-    public void Clone_copies_values_and_given_flags()
+    public void Clone_BoardWithValuesAndGivens_CopiesBothFaithfully()
     {
         var board = new Board();
         board.Set(0, 0, 3, given: true);
@@ -20,7 +20,7 @@ public class BoardTests
     }
 
     [Fact]
-    public void Clone_is_independent_of_the_original()
+    public void Clone_EditingTheCopy_LeavesTheOriginalUnchanged()
     {
         var board = new Board();
         board.Set(2, 2, 4);
@@ -33,19 +33,19 @@ public class BoardTests
     }
 
     [Fact]
-    public void Clone_carries_the_recorded_solution()
+    public void Clone_BoardWithRecordedSolution_CarriesTheWholeSolution()
     {
         var board = new Board();
-        board.SetSolution(FilledGrid());
+        board.SetSolution(TestBoards.CanonicalSolvedGrid());
 
         var copy = board.Clone();
 
         Assert.True(copy.HasSolution);
-        Assert.Equal(board.SolutionAt(4, 4), copy.SolutionAt(4, 4));
+        Assert.Equal(TestBoards.Solution(board), TestBoards.Solution(copy));
     }
 
     [Fact]
-    public void A_board_has_no_solution_until_one_is_recorded()
+    public void HasSolution_BeforeAnySolutionIsRecorded_IsFalse()
     {
         var board = new Board();
 
@@ -54,7 +54,7 @@ public class BoardTests
     }
 
     [Fact]
-    public void SetSolution_defends_against_a_wrongly_sized_grid()
+    public void SetSolution_WronglySizedGrid_ThrowsArgumentException()
     {
         var board = new Board();
 
@@ -62,32 +62,24 @@ public class BoardTests
     }
 
     [Fact]
-    public void SetSolution_takes_a_copy_so_later_edits_do_not_leak_in()
+    public void SetSolution_CallerMutatesTheGridAfterwards_DoesNotAffectTheBoard()
     {
         var board = new Board();
-        var grid = FilledGrid();
+        var grid = TestBoards.CanonicalSolvedGrid();
         board.SetSolution(grid);
 
         grid[0, 0] = 9;
 
+        Assert.Equal(TestBoards.CanonicalValueAt(0, 0), board.SolutionAt(0, 0));
         Assert.NotEqual(9, board.SolutionAt(0, 0));
     }
 
     [Fact]
-    public void A_given_cell_cannot_be_overwritten_by_the_player()
+    public void Set_PlayerWriteOverAGivenCell_ThrowsInvalidOperationException()
     {
         var board = new Board();
         board.Set(0, 0, 6, given: true);
 
         Assert.Throws<InvalidOperationException>(() => board.Set(0, 0, 1));
-    }
-
-    private static int[,] FilledGrid()
-    {
-        var grid = new int[9, 9];
-        for (int r = 0; r < 9; r++)
-        for (int c = 0; c < 9; c++)
-            grid[r, c] = (r * 3 + r / 3 + c) % 9 + 1;
-        return grid;
     }
 }

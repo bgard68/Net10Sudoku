@@ -12,24 +12,55 @@ Every past defect is mapped to whatever detects it today in the
 including the handful that are still guarded only by a human following the
 browser-verification procedure below.
 
-## Unit and integration tests (`Sudoku.Tests`, 104 tests)
+## Unit and integration tests (`Sudoku.Tests`, 266 tests)
 
-xUnit tests built over the real service graph rather than mocks, so they
-exercise the shipped wiring. Coverage by area:
+The suite spans three levels. Functional tests run over the real service graph
+so they exercise the shipped wiring; unit tests for the coordinator substitute
+deterministic stubs at the generator/solver interfaces (pure collaborators such
+as the validator stay real) so behaviour is pinned on a fixed, hand-verifiable
+fixture board; integration tests cover the composition root and the
+protected-storage adapter over a real data-protection stack.
+
+### Conventions
+
+Every test follows the same shape, and CI enforces the build that runs them:
+
+- **Naming** is `MethodUnderTest_ConditionOrInput_ExpectedBehavior`, so a
+  failure name states the broken contract without opening the file.
+- **Arrange / Act / Assert**, separated by blank lines.
+- **No control flow in a test body.** Loops and conditionals live in named
+  helpers (`TestBoards`, per-file scanners) or test doubles. Whole-board checks
+  compare flattened arrays via `TestBoards.Values/Givens/Notes/Solution`:
+  xUnit reports the first differing index, so the diagnostic is as good as a
+  per-cell loop without the branching.
+- **Exact assertions.** No `Assert.NotNull(result)` as a test's point; tests
+  pin exact values, candidate bitmasks, `ParamName`s, and storage keys.
+- **Time is injected** through `TestClock`, never read from the wall clock.
+
+Coverage by area:
 
 | Area | What is pinned |
 |---|---|
-| `Board` / `Cell` | Cloning fidelity (values, givens, notes, solution), the given-cell invariant, solution recording defends against bad input |
+| `Board` / `Cell` | Cloning fidelity (values, givens, notes, solution), the given-cell invariant, solution recording defends against bad input, note toggling rules |
+| Board guardrails | Off-grid coordinates and digits outside 1..9 rejected with argument exceptions at the domain boundary (they previously surfaced as raw index faults or corrupted solver bitmasks) |
+| `Position` | On/off-grid validity including extreme values, value equality, deconstruction |
+| `BoardHistory` | Snapshot-stack semantics in isolation: undo/redo on empty trails, redo invalidation, snapshots are copies rather than references |
 | `SudokuValidator` | Row, column and box constraints; the target cell is excluded from its own conflict check |
 | `SudokuSolver` | Solves an empty board; rejects conflicting givens; a failed solve leaves the board untouched; the fast solution counter agrees with an independent naive counter |
 | `SudokuGenerator` | Every generated board has exactly one solution (verified by the independent counter); the recorded solution agrees with the givens; clue counts by difficulty |
-| `PuzzleGrader` | Band guarantees per difficulty; a Medium board never requires advanced techniques; grading is repeatable and does not mutate the board |
+| `PuzzleGrader` | Band guarantees per difficulty; a Medium board never requires advanced techniques; grading is repeatable and does not mutate the board; contradictory positions grade as Advanced; constructor contract |
+| Grading techniques | `GradingGrid` candidate bookkeeping (exact masks), naked and hidden singles, pointing and claiming locked candidates, naked pairs - each on a hand-built position where the deduction is verifiable on paper, plus no-progress cases |
 | `SudokuService` | Given cells cannot be overwritten; ClearAll keeps clues; Solve succeeds despite wrong entries; conflicts detected |
+| `SudokuService` (unit) | On the fixed fixture puzzle: mistake counting (exact counts, no solution means no mistakes), notes-mode branches, peer note sweep hits row/column/box only, no-op actions record no history, impossible digits and off-grid selections are ignored, solver-failure paths |
 | Hints | Regression: hints survive wrong entries elsewhere; a hint corrects a wrong value in the selected cell |
 | Undo / redo / notes | Atomic revert of compound actions (including swept pencil marks), redo invalidation, notes never count as placements |
 | Mistakes | Wrong placements count, notes never do, undo does not forgive, snapshot round-trips the count |
 | `GameSnapshot` | Full round-trip of values/givens/notes/solution; malformed snapshots rejected |
 | `GameSession` | Restore-or-new startup, corrupt-save fallback, clock resume, persistence cadence, best-time rules (slower win keeps the record, auto-solve never records), solved games clear their save |
+| `GameSession` edges | Reentrancy while generation is in flight (second request ignored), the clock neither runs during generation nor after a win, a tie never beats the record, negative persisted clocks clamp to zero |
+| Gameplay flows | Functional end-to-end: complete a game mistake-free; wrong entry corrected by a hint completes with the mistake on record; persist, restore in a fresh circuit and win - best time set, save cleared |
+| Dependency injection | The composition root resolves the same graph `Program.cs` builds: correct implementations, scoped-vs-singleton lifetimes, all three grading techniques, container validates on build |
+| `GameStorage` | Adapter over real `ProtectedLocalStorage` + data protection (only the JS boundary is faked): full snapshot round-trip, payload is encrypted at rest, tampered or failing storage degrades to null instead of throwing, per-difficulty key scheme |
 | `SecurityPostureTests` | Every finding from the security review, asserted against the real pipeline (see below) |
 | `FrontendPostureTests` | Every finding from the frontend review that is checkable in source (see below) |
 
@@ -185,9 +216,17 @@ Two independent jobs on every push and PR to `main`:
 
 ```mermaid
 flowchart LR
-    Push["push / pull request"] --> A["build-and-test<br/>restore, Release build,<br/>104 tests"]
+    Push["push / pull request"] --> A["build-and-test<br/>restore, Release build,<br/>266 tests"]
     Push --> B["smoke-test<br/>pwsh tools/smoke-test.ps1 -StartServer<br/>boots the built DLL, 14 HTTP checks"]
 ```
+
+CodeQL also runs on every push and pull request, but it is **not** a workflow
+in this repository — it is GitHub's *default setup*, configured in the repo's
+Code security settings, and it covers C#, Actions, JavaScript and Python.
+Do not add a `codeql.yml`: an advanced-configuration workflow cannot upload
+its results while default setup is enabled, so the job fails with
+"CodeQL analyses from advanced configurations cannot be processed when the
+default setup is enabled" even though the scan itself succeeded.
 
 Pipeline hygiene:
 - `permissions: contents: read` - the workflow token carries least privilege
