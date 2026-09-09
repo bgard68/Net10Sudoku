@@ -5,11 +5,10 @@ namespace Sudoku.Tests;
 public class UndoRedoAndNotesTests
 {
     [Fact]
-    public void Undo_reverts_a_placement_and_redo_restores_it()
+    public void Undo_AfterAPlacement_ClearsTheCellAndRedoRestoresIt()
     {
         var svc = TestGame.Service();
         svc.New(Difficulty.Easy);
-
         var (row, col) = TestGame.FirstEmptyCell(svc.Current);
         svc.Select(row, col);
         svc.Place(5);
@@ -24,11 +23,10 @@ public class UndoRedoAndNotesTests
     }
 
     [Fact]
-    public void Undo_reverts_ClearAll_in_one_step()
+    public void Undo_AfterClearAll_RevertsEveryClearedCellInOneStep()
     {
         var svc = TestGame.Service();
         svc.New(Difficulty.Easy);
-
         var (row, col) = TestGame.FirstEmptyCell(svc.Current);
         svc.Select(row, col);
         svc.Place(5);
@@ -36,15 +34,15 @@ public class UndoRedoAndNotesTests
         Assert.Null(svc.Current.Get(row, col));
 
         svc.Undo();
+
         Assert.Equal(5, svc.Current.Get(row, col));
     }
 
     [Fact]
-    public void A_new_action_discards_the_redo_history()
+    public void Place_AfterAnUndo_DiscardsTheRedoHistory()
     {
         var svc = TestGame.Service();
         svc.New(Difficulty.Easy);
-
         var (row, col) = TestGame.FirstEmptyCell(svc.Current);
         svc.Select(row, col);
         svc.Place(5);
@@ -52,29 +50,31 @@ public class UndoRedoAndNotesTests
         Assert.True(svc.CanRedo);
 
         svc.Place(6);
+
         Assert.False(svc.CanRedo);
     }
 
     [Fact]
-    public void Starting_a_new_game_clears_history()
+    public void New_AfterMovesWereMade_ClearsBothHistoryTrails()
     {
         var svc = TestGame.Service();
         svc.New(Difficulty.Easy);
-
         var (row, col) = TestGame.FirstEmptyCell(svc.Current);
         svc.Select(row, col);
         svc.Place(5);
         Assert.True(svc.CanUndo);
 
         svc.New(Difficulty.Easy);
+
         Assert.False(svc.CanUndo);
         Assert.False(svc.CanRedo);
     }
 
     [Fact]
-    public async Task NewAsync_produces_a_playable_board_and_clears_history()
+    public async Task NewAsync_FreshGame_ProducesAPlayableBoardWithNoHistory()
     {
         var svc = TestGame.Service();
+
         await svc.NewAsync(Difficulty.Easy);
 
         Assert.True(svc.Current.HasSolution);
@@ -83,11 +83,10 @@ public class UndoRedoAndNotesTests
     }
 
     [Fact]
-    public void Notes_mode_toggles_pencil_marks_instead_of_placing()
+    public void Place_InNotesMode_TogglesAPencilMarkInsteadOfPlacing()
     {
         var svc = TestGame.Service();
         svc.New(Difficulty.Easy);
-
         var (row, col) = TestGame.FirstEmptyCell(svc.Current);
         svc.Select(row, col);
         svc.ToggleNotesMode();
@@ -101,33 +100,29 @@ public class UndoRedoAndNotesTests
     }
 
     [Fact]
-    public void Placing_a_value_sweeps_that_note_from_peers()
+    public void Place_RealValue_SweepsThatPencilMarkFromItsPeers()
     {
         var svc = TestGame.Service();
         svc.New(Difficulty.Easy);
-
         var (row, col, otherCol) = RowWithTwoEmptyCells(svc.Current);
-
         svc.ToggleNotesMode();
         svc.Select(row, otherCol);
-        svc.Place(7); // pencil in 7
+        svc.Place(7);
         Assert.True(svc.Current[row, otherCol].HasNote(7));
 
         svc.ToggleNotesMode();
         svc.Select(row, col);
-        svc.Place(7); // real placement of the same digit in the same row
+        svc.Place(7);
 
         Assert.False(svc.Current[row, otherCol].HasNote(7));
     }
 
     [Fact]
-    public void Undo_restores_swept_notes()
+    public void Undo_AfterAPlacementThatSweptNotes_RestoresThoseNotes()
     {
         var svc = TestGame.Service();
         svc.New(Difficulty.Easy);
-
         var (row, col, otherCol) = RowWithTwoEmptyCells(svc.Current);
-
         svc.ToggleNotesMode();
         svc.Select(row, otherCol);
         svc.Place(7);
@@ -140,6 +135,40 @@ public class UndoRedoAndNotesTests
 
         Assert.Null(svc.Current.Get(row, col));
         Assert.True(svc.Current[row, otherCol].HasNote(7));
+    }
+
+    [Fact]
+    public void Clear_CellHoldingNotes_RemovesThemAlongWithAnyValue()
+    {
+        var svc = TestGame.Service();
+        svc.New(Difficulty.Easy);
+        var (row, col) = TestGame.FirstEmptyCell(svc.Current);
+        svc.Select(row, col);
+        svc.ToggleNotesMode();
+        svc.Place(2);
+        svc.Place(9);
+        Assert.Equal(2, svc.Current[row, col].Notes.Count);
+
+        svc.Clear();
+
+        Assert.Empty(svc.Current[row, col].Notes);
+    }
+
+    [Fact]
+    public void Place_RealValueOverACellWithNotes_ClearsThatCellsOwnNotes()
+    {
+        var svc = TestGame.Service();
+        svc.New(Difficulty.Easy);
+        var (row, col) = TestGame.FirstEmptyCell(svc.Current);
+        svc.Select(row, col);
+        svc.ToggleNotesMode();
+        svc.Place(2);
+        svc.ToggleNotesMode();
+
+        svc.Place(5);
+
+        Assert.Equal(5, svc.Current.Get(row, col));
+        Assert.Empty(svc.Current[row, col].Notes);
     }
 
     // A 41-given Easy board occasionally leaves the first empty cell alone in its
@@ -158,39 +187,5 @@ public class UndoRedoAndNotesTests
         }
 
         throw new InvalidOperationException("No row with two empty cells found.");
-    }
-
-    [Fact]
-    public void Clear_removes_notes_as_well_as_values()
-    {
-        var svc = TestGame.Service();
-        svc.New(Difficulty.Easy);
-
-        var (row, col) = TestGame.FirstEmptyCell(svc.Current);
-        svc.Select(row, col);
-        svc.ToggleNotesMode();
-        svc.Place(2);
-        svc.Place(9);
-        Assert.Equal(2, svc.Current[row, col].Notes.Count);
-
-        svc.Clear();
-        Assert.Empty(svc.Current[row, col].Notes);
-    }
-
-    [Fact]
-    public void Placing_a_real_value_clears_the_cells_own_notes()
-    {
-        var svc = TestGame.Service();
-        svc.New(Difficulty.Easy);
-
-        var (row, col) = TestGame.FirstEmptyCell(svc.Current);
-        svc.Select(row, col);
-        svc.ToggleNotesMode();
-        svc.Place(2);
-        svc.ToggleNotesMode();
-        svc.Place(5);
-
-        Assert.Equal(5, svc.Current.Get(row, col));
-        Assert.Empty(svc.Current[row, col].Notes);
     }
 }

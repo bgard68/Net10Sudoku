@@ -7,6 +7,8 @@ public sealed class SudokuValidator : ISudokuValidator
 {
     public bool IsValid(Board board)
     {
+        ArgumentNullException.ThrowIfNull(board);
+
         for (int r = 0; r < 9; r++)
         {
             var row = new bool[10];
@@ -47,6 +49,8 @@ public sealed class SudokuValidator : ISudokuValidator
 
     public bool IsComplete(Board board)
     {
+        ArgumentNullException.ThrowIfNull(board);
+
         for (int r = 0; r < 9; r++)
         for (int c = 0; c < 9; c++)
             if (board.Get(r,c) is null) return false;
@@ -55,6 +59,14 @@ public sealed class SudokuValidator : ISudokuValidator
 
     public bool CanPlace(Board board, int row, int col, int value)
     {
+        ArgumentNullException.ThrowIfNull(board);
+        ArgumentOutOfRangeException.ThrowIfNegative(row);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(row, 8);
+        ArgumentOutOfRangeException.ThrowIfNegative(col);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(col, 8);
+        ArgumentOutOfRangeException.ThrowIfLessThan(value, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(value, 9);
+
         for (int c = 0; c < 9; c++)
         {
             if (c == col) continue;

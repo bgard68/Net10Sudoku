@@ -13,7 +13,11 @@ public sealed class GameStorage : IGameStore
 
     private readonly ProtectedLocalStorage _storage;
 
-    public GameStorage(ProtectedLocalStorage storage) => _storage = storage;
+    public GameStorage(ProtectedLocalStorage storage)
+    {
+        ArgumentNullException.ThrowIfNull(storage);
+        _storage = storage;
+    }
 
     public async Task<GameSnapshot?> LoadGameAsync()
     {

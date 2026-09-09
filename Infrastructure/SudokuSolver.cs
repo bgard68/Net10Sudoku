@@ -15,6 +15,8 @@ public sealed class SudokuSolver : ISudokuSolver
 
     public bool TrySolve(Board board)
     {
+        ArgumentNullException.ThrowIfNull(board);
+
         var state = State.Load(board);
         if (state is null) return false; // existing values already conflict
 
@@ -32,6 +34,7 @@ public sealed class SudokuSolver : ISudokuSolver
 
     public int CountSolutions(Board board, int limit)
     {
+        ArgumentNullException.ThrowIfNull(board);
         if (limit <= 0) return 0;
 
         var state = State.Load(board);

@@ -2,7 +2,10 @@ namespace Sudoku.Domain;
 
 // The 9x9 grid. Cells are exposed read-only through the indexer; every mutation
 // goes through a Board method so the given-cell invariant is enforced in one
-// place and callers can never swap a cell out of the grid.
+// place and callers can never swap a cell out of the grid. The board is also
+// the validation boundary: coordinates and digits are range-checked here, so a
+// value outside 1..9 can never reach the bitmask solver, where it would shift
+// past bit 9 and corrupt the row/column/box masks without any exception.
 public sealed class Board
 {
     private readonly Cell[,] _cells;
@@ -17,17 +20,48 @@ public sealed class Board
     }
 
     // Read-only access to a cell; the cell's own mutators are internal.
-    public Cell this[int row, int col] => _cells[row, col];
+    public Cell this[int row, int col]
+    {
+        get
+        {
+            ValidateCoordinates(row, col);
+            return _cells[row, col];
+        }
+    }
 
-    public int? Get(int r, int c) => _cells[r,c].Value;
+    public int? Get(int r, int c)
+    {
+        ValidateCoordinates(r, c);
+        return _cells[r,c].Value;
+    }
 
-    public void Set(int r, int c, int? v, bool given = false) => _cells[r,c].Set(v, given);
+    public void Set(int r, int c, int? v, bool given = false)
+    {
+        ValidateCoordinates(r, c);
+        if (v is < 1 or > 9)
+            throw new ArgumentOutOfRangeException(nameof(v), v, "Cell value must be between 1 and 9.");
+        _cells[r,c].Set(v, given);
+    }
 
-    public void ToggleNote(int r, int c, int value) => _cells[r,c].ToggleNote(value);
+    public void ToggleNote(int r, int c, int value)
+    {
+        ValidateCoordinates(r, c);
+        ValidateDigit(value);
+        _cells[r,c].ToggleNote(value);
+    }
 
-    public void RemoveNote(int r, int c, int value) => _cells[r,c].RemoveNote(value);
+    public void RemoveNote(int r, int c, int value)
+    {
+        ValidateCoordinates(r, c);
+        ValidateDigit(value);
+        _cells[r,c].RemoveNote(value);
+    }
 
-    public void ClearNotes(int r, int c) => _cells[r,c].ClearNotes();
+    public void ClearNotes(int r, int c)
+    {
+        ValidateCoordinates(r, c);
+        _cells[r,c].ClearNotes();
+    }
 
     // True when the puzzle's unique solution is known (set by the generator).
     public bool HasSolution => _solution is not null;
@@ -41,13 +75,25 @@ public sealed class Board
         if (solution.GetLength(0) != 9 || solution.GetLength(1) != 9)
             throw new ArgumentException("Solution must be a 9x9 grid.", nameof(solution));
 
+        // A solution is by definition complete, so every cell must hold a digit.
+        for (int r = 0; r < 9; r++)
+        for (int c = 0; c < 9; c++)
+        {
+            if (solution[r,c] is < 1 or > 9)
+                throw new ArgumentException($"Solution value {solution[r,c]} at ({r},{c}) must be between 1 and 9.", nameof(solution));
+        }
+
         var copy = new int[9,9];
         Array.Copy(solution, copy, solution.Length);
         _solution = copy;
     }
 
     // The solved value for a cell, or null when no solution has been recorded.
-    public int? SolutionAt(int r, int c) => _solution?[r,c];
+    public int? SolutionAt(int r, int c)
+    {
+        ValidateCoordinates(r, c);
+        return _solution?[r,c];
+    }
 
     // Create a deep copy of the board (values, given flags, notes and any known solution)
     public Board Clone()
@@ -63,5 +109,19 @@ public sealed class Board
         }
         if (_solution is not null) copy.SetSolution(_solution);
         return copy;
+    }
+
+    private static void ValidateCoordinates(int row, int col)
+    {
+        if ((uint)row > 8)
+            throw new ArgumentOutOfRangeException(nameof(row), row, "Row must be between 0 and 8.");
+        if ((uint)col > 8)
+            throw new ArgumentOutOfRangeException(nameof(col), col, "Column must be between 0 and 8.");
+    }
+
+    private static void ValidateDigit(int value)
+    {
+        if (value is < 1 or > 9)
+            throw new ArgumentOutOfRangeException(nameof(value), value, "Digit must be between 1 and 9.");
     }
 }

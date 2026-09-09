@@ -1,4 +1,5 @@
 using Sudoku.Application.Models;
+using Sudoku.Domain;
 
 namespace Sudoku.Tests;
 
@@ -9,7 +10,7 @@ public class SudokuGeneratorTests
     [InlineData(Difficulty.Medium)]
     [InlineData(Difficulty.Hard)]
     [InlineData(Difficulty.Professional)]
-    public void Generated_puzzles_have_exactly_one_solution(Difficulty difficulty)
+    public void Generate_AnyDifficulty_ProducesAPuzzleWithExactlyOneSolution(Difficulty difficulty)
     {
         var validator = TestGame.Validator();
         var generator = TestGame.Generator(validator, TestGame.Solver());
@@ -24,80 +25,82 @@ public class SudokuGeneratorTests
     [InlineData(Difficulty.Medium)]
     [InlineData(Difficulty.Hard)]
     [InlineData(Difficulty.Professional)]
-    public void Generated_puzzles_record_a_solution_that_agrees_with_the_givens(Difficulty difficulty)
+    public void Generate_AnyDifficulty_RecordsASolutionThatAgreesWithEveryClue(Difficulty difficulty)
     {
-        var validator = TestGame.Validator();
-        var generator = TestGame.Generator(validator, TestGame.Solver());
+        var generator = TestGame.Generator(TestGame.Validator(), TestGame.Solver());
 
         var board = generator.Generate(difficulty);
 
         Assert.True(board.HasSolution);
-        for (int r = 0; r < 9; r++)
-        for (int c = 0; c < 9; c++)
-        {
-            var solved = board.SolutionAt(r, c);
-            Assert.NotNull(solved);
-            Assert.InRange(solved!.Value, 1, 9);
-
-            if (board.Get(r, c) is int clue)
-                Assert.Equal(clue, solved.Value);
-        }
+        Assert.Empty(SolutionDigitsOutsideOneToNine(board));
+        Assert.Empty(CluesContradictingTheSolution(board));
     }
 
     [Fact]
-    public void Recorded_solution_is_itself_a_complete_valid_grid()
+    public void Generate_RecordedSolution_IsItselfACompleteValidGrid()
     {
         var validator = TestGame.Validator();
         var generator = TestGame.Generator(validator, TestGame.Solver());
 
         var board = generator.Generate(Difficulty.Medium);
 
-        var filled = new Domain.Board();
-        for (int r = 0; r < 9; r++)
-        for (int c = 0; c < 9; c++)
-            filled.Set(r, c, board.SolutionAt(r, c));
-
-        Assert.True(validator.IsComplete(filled));
+        Assert.True(validator.IsComplete(TestBoards.SolvedCopyOf(board)));
     }
 
     [Fact]
-    public void Every_cell_the_player_can_edit_is_empty_and_every_clue_is_marked_given()
+    public void Generate_EveryCell_IsEitherAMarkedClueOrEmptyAndEditable()
     {
-        var validator = TestGame.Validator();
-        var generator = TestGame.Generator(validator, TestGame.Solver());
+        var generator = TestGame.Generator(TestGame.Validator(), TestGame.Solver());
 
         var board = generator.Generate(Difficulty.Easy);
 
-        for (int r = 0; r < 9; r++)
-        for (int c = 0; c < 9; c++)
-        {
-            var cell = board[r, c];
-            Assert.Equal(cell.Value is not null, cell.IsGiven);
-        }
+        // A cell holds a value exactly when it is a given, for all 81 cells.
+        Assert.Equal(TestBoards.Values(board).Select(v => v is not null), TestBoards.Givens(board));
     }
 
     // Medium and Hard clue counts overlap run to run, so only the stable
     // relationship is asserted: Easy always keeps noticeably more clues.
     [Fact]
-    public void Easy_puzzles_leave_more_clues_than_harder_ones()
+    public void Generate_EasyPuzzle_LeavesMoreCluesThanHarderOnes()
     {
-        var validator = TestGame.Validator();
-        var generator = TestGame.Generator(validator, TestGame.Solver());
+        var generator = TestGame.Generator(TestGame.Validator(), TestGame.Solver());
 
-        int easy = Givens(generator.Generate(Difficulty.Easy));
-        int medium = Givens(generator.Generate(Difficulty.Medium));
-        int hard = Givens(generator.Generate(Difficulty.Hard));
+        int easy = TestBoards.FilledCellCount(generator.Generate(Difficulty.Easy));
+        int medium = TestBoards.FilledCellCount(generator.Generate(Difficulty.Medium));
+        int hard = TestBoards.FilledCellCount(generator.Generate(Difficulty.Hard));
 
         Assert.True(easy > medium, $"Easy ({easy}) should leave more clues than Medium ({medium}).");
         Assert.True(easy > hard, $"Easy ({easy}) should leave more clues than Hard ({hard}).");
     }
 
-    private static int Givens(Domain.Board board)
+    [Fact]
+    public void Constructor_NullDependency_ThrowsArgumentNullExceptionNamingTheParameter()
     {
-        int n = 0;
-        for (int r = 0; r < 9; r++)
-        for (int c = 0; c < 9; c++)
-            if (board.Get(r, c) is not null) n++;
-        return n;
+        var noSolver = Assert.Throws<ArgumentNullException>(
+            () => new Infrastructure.SudokuGenerator(null!, new Infrastructure.PuzzleGrader()));
+        var noGrader = Assert.Throws<ArgumentNullException>(
+            () => new Infrastructure.SudokuGenerator(TestGame.Solver(), null!));
+
+        Assert.Equal("solver", noSolver.ParamName);
+        Assert.Equal("grader", noGrader.ParamName);
+    }
+
+    private static List<string> SolutionDigitsOutsideOneToNine(Board board) =>
+        TestBoards.Solution(board)
+            .Select((value, i) => (value, i))
+            .Where(x => x.value is not (>= 1 and <= 9))
+            .Select(x => $"cell {x.i} = {x.value?.ToString() ?? "null"}")
+            .ToList();
+
+    private static List<string> CluesContradictingTheSolution(Board board)
+    {
+        var values = TestBoards.Values(board);
+        var solution = TestBoards.Solution(board);
+
+        return values
+            .Select((clue, i) => (clue, i))
+            .Where(x => x.clue is not null && x.clue != solution[x.i])
+            .Select(x => $"cell {x.i}: clue {x.clue} vs solution {solution[x.i]}")
+            .ToList();
     }
 }

@@ -23,6 +23,10 @@ public sealed class GameSession
 
     public GameSession(IGameService game, IGameStore store, TimeProvider clock)
     {
+        ArgumentNullException.ThrowIfNull(game);
+        ArgumentNullException.ThrowIfNull(store);
+        ArgumentNullException.ThrowIfNull(clock);
+
         _game = game;
         _store = store;
         _clock = clock;

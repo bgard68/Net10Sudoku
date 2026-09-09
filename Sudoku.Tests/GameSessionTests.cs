@@ -10,7 +10,7 @@ namespace Sudoku.Tests;
 public class GameSessionTests
 {
     [Fact]
-    public async Task Initialize_with_an_empty_store_starts_a_fresh_easy_game()
+    public async Task InitializeAsync_EmptyStore_StartsAFreshEasyGame()
     {
         var (session, _, _) = NewSession();
 
@@ -22,7 +22,7 @@ public class GameSessionTests
     }
 
     [Fact]
-    public async Task Initialize_restores_a_saved_game_with_its_clock_and_mistakes()
+    public async Task InitializeAsync_SavedGame_RestoresItsBoardClockAndMistakes()
     {
         var (session, game, store) = NewSession();
 
@@ -42,7 +42,7 @@ public class GameSessionTests
     }
 
     [Fact]
-    public async Task Initialize_falls_back_to_a_new_game_when_the_snapshot_is_corrupt()
+    public async Task InitializeAsync_CorruptSnapshot_FallsBackToANewEasyGame()
     {
         var (session, _, store) = NewSession();
         store.Game = new GameSnapshot
@@ -59,7 +59,7 @@ public class GameSessionTests
     }
 
     [Fact]
-    public async Task Starting_a_game_resets_the_clock_and_record_flags_and_persists()
+    public async Task StartNewAsync_AnyDifficulty_ResetsTheClockAndRecordFlagsAndPersists()
     {
         var (session, _, store) = NewSession();
 
@@ -69,12 +69,11 @@ public class GameSessionTests
         Assert.Equal(TimeSpan.Zero, session.Elapsed);
         Assert.False(session.NewBest);
         Assert.False(session.UsedAutoSolve);
-        Assert.NotNull(store.Game); // the fresh game is saved immediately
-        Assert.Equal(Difficulty.Hard, store.Game!.Difficulty);
+        Assert.Equal(Difficulty.Hard, store.Game!.Difficulty); // the fresh game is saved immediately
     }
 
     [Fact]
-    public async Task The_clock_follows_the_time_provider()
+    public async Task TickAsync_TimeAdvances_ElapsedFollowsTheTimeProvider()
     {
         var (session, _, _) = NewSession(out var clock);
         await session.StartNewAsync(Difficulty.Easy);
@@ -86,22 +85,33 @@ public class GameSessionTests
     }
 
     [Fact]
-    public async Task The_running_game_is_persisted_every_twentieth_tick()
+    public async Task TickAsync_NineteenTicks_DoesNotPersistYet()
     {
-        var (session, _, store) = NewSession(out var clock);
+        var (session, _, store) = NewSession();
         await session.StartNewAsync(Difficulty.Easy);
         store.GameSaves = 0; // ignore the save from StartNewAsync
 
-        for (int i = 0; i < 19; i++) await session.TickAsync();
+        await Tick(session, 19);
+
         Assert.Equal(0, store.GameSaves);
+    }
+
+    [Fact]
+    public async Task TickAsync_EveryTwentiethTick_PersistsTheRunningGame()
+    {
+        var (session, _, store) = NewSession(out var clock);
+        await session.StartNewAsync(Difficulty.Easy);
+        store.GameSaves = 0;
+        await Tick(session, 19);
 
         clock.Advance(TimeSpan.FromSeconds(10));
         await session.TickAsync(); // 20th
+
         Assert.Equal(1, store.GameSaves);
     }
 
     [Fact]
-    public async Task A_genuine_win_sets_a_best_time()
+    public async Task MarkSolved_GenuineWin_SetsANewBestTime()
     {
         var (session, _, store) = NewSession(out var clock);
         await session.StartNewAsync(Difficulty.Easy);
@@ -115,7 +125,7 @@ public class GameSessionTests
     }
 
     [Fact]
-    public async Task A_slower_win_keeps_the_existing_record()
+    public async Task MarkSolved_SlowerThanTheRecord_KeepsTheExistingRecord()
     {
         var (session, _, store) = NewSession(out var clock);
         store.Bests[Difficulty.Easy] = 60;
@@ -130,7 +140,7 @@ public class GameSessionTests
     }
 
     [Fact]
-    public async Task An_auto_solved_win_never_sets_a_record()
+    public async Task MarkSolved_AfterAutoSolve_NeverSetsARecord()
     {
         var (session, _, store) = NewSession(out var clock);
         await session.StartNewAsync(Difficulty.Easy);
@@ -144,7 +154,7 @@ public class GameSessionTests
     }
 
     [Fact]
-    public async Task Solving_clears_the_save_so_there_is_nothing_to_restore()
+    public async Task PersistAsync_SolvedGame_ClearsTheSaveSoThereIsNothingToRestore()
     {
         var (session, _, store) = NewSession();
         await session.StartNewAsync(Difficulty.Easy);
@@ -157,20 +167,20 @@ public class GameSessionTests
     }
 
     [Fact]
-    public async Task Undoing_past_a_win_reopens_the_game()
+    public async Task ResetSolved_AfterAWin_ReopensTheGame()
     {
         var (session, _, _) = NewSession();
         await session.StartNewAsync(Difficulty.Easy);
-
         session.MarkSolved();
         Assert.True(session.IsSolved);
 
         session.ResetSolved();
+
         Assert.False(session.IsSolved);
     }
 
     [Fact]
-    public async Task Each_new_board_bumps_the_board_version()
+    public async Task StartNewAsync_EachNewBoard_BumpsTheBoardVersion()
     {
         var (session, _, _) = NewSession();
         await session.StartNewAsync(Difficulty.Easy);
@@ -178,55 +188,23 @@ public class GameSessionTests
 
         await session.StartNewAsync(Difficulty.Medium);
 
-        Assert.True(session.BoardVersion > first);
+        Assert.Equal(first + 1, session.BoardVersion);
     }
 
-    private static (GameSession Session, IGameService Game, MemoryStore Store) NewSession()
+    // Repeated ticking lives in a helper so the test bodies stay loop-free.
+    private static async Task Tick(GameSession session, int times)
+    {
+        for (int i = 0; i < times; i++) await session.TickAsync();
+    }
+
+    private static (GameSession Session, IGameService Game, MemoryGameStore Store) NewSession()
         => NewSession(out _);
 
-    private static (GameSession Session, IGameService Game, MemoryStore Store) NewSession(out TestClock clock)
+    private static (GameSession Session, IGameService Game, MemoryGameStore Store) NewSession(out TestClock clock)
     {
         var game = TestGame.Service();
-        var store = new MemoryStore();
+        var store = new MemoryGameStore();
         clock = new TestClock();
         return (new GameSession(game, store, clock), game, store);
-    }
-
-    private sealed class TestClock : TimeProvider
-    {
-        private DateTimeOffset _now = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
-        public override DateTimeOffset GetUtcNow() => _now;
-        public void Advance(TimeSpan by) => _now += by;
-    }
-
-    private sealed class MemoryStore : IGameStore
-    {
-        public GameSnapshot? Game;
-        public int GameSaves;
-        public readonly Dictionary<Difficulty, int> Bests = new();
-
-        public Task<GameSnapshot?> LoadGameAsync() => Task.FromResult(Game);
-
-        public Task SaveGameAsync(GameSnapshot snapshot)
-        {
-            Game = snapshot;
-            GameSaves++;
-            return Task.CompletedTask;
-        }
-
-        public Task ClearGameAsync()
-        {
-            Game = null;
-            return Task.CompletedTask;
-        }
-
-        public Task<int?> LoadBestSecondsAsync(Difficulty difficulty) =>
-            Task.FromResult(Bests.TryGetValue(difficulty, out var s) ? (int?)s : null);
-
-        public Task SaveBestSecondsAsync(Difficulty difficulty, int seconds)
-        {
-            Bests[difficulty] = seconds;
-            return Task.CompletedTask;
-        }
     }
 }
