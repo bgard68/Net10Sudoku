@@ -12,7 +12,7 @@ Every past defect is mapped to whatever detects it today in the
 including the handful that are still guarded only by a human following the
 browser-verification procedure below.
 
-## Unit and integration tests (`Sudoku.Tests`, 266 tests)
+## Unit and integration tests (`Sudoku.Tests`, 271 tests)
 
 The suite spans three levels. Functional tests run over the real service graph
 so they exercise the shipped wiring; unit tests for the coordinator substitute
@@ -60,6 +60,7 @@ Coverage by area:
 | `GameSession` edges | Reentrancy while generation is in flight (second request ignored), the clock neither runs during generation nor after a win, a tie never beats the record, negative persisted clocks clamp to zero |
 | Gameplay flows | Functional end-to-end: complete a game mistake-free; wrong entry corrected by a hint completes with the mistake on record; persist, restore in a fresh circuit and win - best time set, save cleared |
 | Dependency injection | The composition root resolves the same graph `Program.cs` builds: correct implementations, scoped-vs-singleton lifetimes, all three grading techniques, container validates on build |
+| Architecture | Dependency arrows point inward only, asserted over the compiled IL (NetArchTest): Domain references no sibling layer and no web or persistence library, Application never reaches Infrastructure or the host, Infrastructure never sees the host - with compiled assembly references pinned as the backstop for what the shared `Sudoku` namespace root keeps the prefix rules from banning |
 | `GameStorage` | Adapter over real `ProtectedLocalStorage` + data protection (only the JS boundary is faked): full snapshot round-trip, payload is encrypted at rest, tampered or failing storage degrades to null instead of throwing, per-difficulty key scheme |
 | `SecurityPostureTests` | Every finding from the security review, asserted against the real pipeline (see below) |
 | `FrontendPostureTests` | Every finding from the frontend review that is checkable in source (see below) |
@@ -216,7 +217,7 @@ Two independent jobs on every push and PR to `main`:
 
 ```mermaid
 flowchart LR
-    Push["push / pull request"] --> A["build-and-test<br/>restore, Release build,<br/>266 tests"]
+    Push["push / pull request"] --> A["build-and-test<br/>restore, Release build,<br/>271 tests"]
     Push --> B["smoke-test<br/>pwsh tools/smoke-test.ps1 -StartServer<br/>boots the built DLL, 14 HTTP checks"]
 ```
 
